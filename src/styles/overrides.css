@@ -1,0 +1,46 @@
+body {
+  opacity: 1 !important;
+}
+
+.ui-main [data-view] {
+  opacity: 1 !important;
+}
+
+.gl {
+  opacity: 1 !important;
+}
+
+.preloader {
+  display: none !important;
+}
+
+.ui-title-inner,
+.ui-header-part-inner,
+.ui-header-secondary .ts-m > *,
+.ui-header-secondary .ui-header-name > *,
+.ui-header-secondary .ui-header-description > *,
+.ui-nav-a-inner,
+.ui-work-ul li > .ui-work-a span,
+.ui-footer-contact a > span,
+.ui-footer-socials a > span,
+.c-button-text-inner,
+.c-link-text-inner,
+.preloader-cta-text-inner,
+.preloader-footer-text-inner,
+.preloader-cta-text-2-inner {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+}
+
+.ui-work-cta {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.ui-work-ul li > .ui-work-a {
+  pointer-events: auto !important;
+}
+
+.scroll-spacer {
+  height: 300vh;
+}

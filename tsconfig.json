@@ -30,5 +30,14 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "_astro_backup",
+    "_astro_tmp",
+    "_migrate_backup",
+    "_react_tmp",
+    "_vite_backup",
+    "next-tmp",
+    "dist"
+  ]
 }

@@ -1,0 +1,58 @@
+[
+  {
+    "slug": "spectral-rooms",
+    "title": "Spectral Rooms",
+    "year": "2024",
+    "role": "Direction / Design",
+    "cover": "/media/placeholder-1.svg",
+    "sceneTexture": "/media/placeholder-1.svg",
+    "accentColor": "#6ef2d6",
+    "description": "A modular spatial study exploring layered light, translucency, and motion.",
+    "media": [
+      { "type": "image", "src": "/media/placeholder-1.svg", "alt": "Spectral Rooms cover" },
+      { "type": "image", "src": "/media/placeholder-2.svg", "alt": "Spectral Rooms detail" }
+    ]
+  },
+  {
+    "slug": "orbital-fields",
+    "title": "Orbital Fields",
+    "year": "2023",
+    "role": "Art Direction / 3D",
+    "cover": "/media/placeholder-2.svg",
+    "sceneTexture": "/media/placeholder-2.svg",
+    "accentColor": "#a58bff",
+    "description": "A kinetic identity system tuned to rotational rhythm and soft contrast.",
+    "media": [
+      { "type": "image", "src": "/media/placeholder-2.svg", "alt": "Orbital Fields cover" },
+      { "type": "image", "src": "/media/placeholder-3.svg", "alt": "Orbital Fields detail" }
+    ]
+  },
+  {
+    "slug": "glow-archive",
+    "title": "Glow Archive",
+    "year": "2022",
+    "role": "Experience / Motion",
+    "cover": "/media/placeholder-3.svg",
+    "sceneTexture": "/media/placeholder-3.svg",
+    "accentColor": "#f07b6d",
+    "description": "A layered narrative about material memory, archived as drifting panels.",
+    "media": [
+      { "type": "image", "src": "/media/placeholder-3.svg", "alt": "Glow Archive cover" },
+      { "type": "image", "src": "/media/placeholder-4.svg", "alt": "Glow Archive detail" }
+    ]
+  },
+  {
+    "slug": "quiet-grid",
+    "title": "Quiet Grid",
+    "year": "2021",
+    "role": "Interactive / Visual",
+    "cover": "/media/placeholder-4.svg",
+    "sceneTexture": "/media/placeholder-4.svg",
+    "accentColor": "#7bb7f0",
+    "description": "A subdued exploration of geometry and spatial cadence.",
+    "media": [
+      { "type": "image", "src": "/media/placeholder-4.svg", "alt": "Quiet Grid cover" },
+      { "type": "image", "src": "/media/placeholder-1.svg", "alt": "Quiet Grid detail" }
+    ]
+  }
+]
