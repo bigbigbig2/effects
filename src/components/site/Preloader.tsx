@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { usePathname } from "next/navigation";
+import { useUiState } from "./UiStateProvider";
+import { Assets } from "../../experience/core/Assets";
+import { projects } from "../../experience/data/projects";
 
 type ProgressDetail = {
   loaded: number;
@@ -9,42 +13,94 @@ type ProgressDetail = {
   progress: number;
 };
 
-type SoundSetDetail = {
-  enabled: boolean;
-};
-
 const CIRCLE_RADIUS = 230;
 const CIRCLE_OUTLINE_RADIUS = 224;
 
 export function Preloader() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const { entered, enter } = useUiState();
   const [progress, setProgress] = useState(0);
+  const [targetProgress, setTargetProgress] = useState(0);
   const [ready, setReady] = useState(false);
-  const [entered, setEntered] = useState(false);
+  const hasPreloaded = useRef(false);
+  const startTimeRef = useRef<number | null>(null);
+  const MIN_DURATION = 1400;
 
   useEffect(() => {
+    if (!isHome) return;
+
     const handleProgress = (event: Event) => {
       const detail = (event as CustomEvent<ProgressDetail>).detail;
       if (!detail) return;
       const nextProgress = Math.min(1, Math.max(0, detail.progress));
-      setProgress(nextProgress);
-      if (nextProgress >= 1) {
-        setReady(true);
-      }
+      setTargetProgress(nextProgress);
     };
 
     const handleComplete = () => {
-      setProgress(1);
-      setReady(true);
+      setTargetProgress(1);
     };
 
     window.addEventListener("assets:progress", handleProgress as EventListener);
     window.addEventListener("assets:complete", handleComplete);
 
+    if (!hasPreloaded.current) {
+      hasPreloaded.current = true;
+      const assets = new Assets();
+      Promise.all(
+        projects.map((project) => assets.loadTexture(project.texture, project.fallbackTexture))
+      ).finally(() => {
+        assets.destroy();
+        setTargetProgress(1);
+      });
+    }
+
     return () => {
       window.removeEventListener("assets:progress", handleProgress as EventListener);
       window.removeEventListener("assets:complete", handleComplete);
     };
-  }, []);
+  }, [isHome]);
+
+  useEffect(() => {
+    if (!isHome) return;
+
+    let raf = 0;
+    const tick = (time: number) => {
+      if (!startTimeRef.current) {
+        startTimeRef.current = time;
+      }
+
+      const elapsed = time - startTimeRef.current;
+      const timeProgress = Math.min(1, elapsed / MIN_DURATION);
+      const desired = Math.min(targetProgress, timeProgress);
+
+      setProgress((prev) => {
+        const next = prev + (desired - prev) * 0.1;
+        if (Math.abs(next - desired) < 0.001) {
+          return desired;
+        }
+        return next;
+      });
+
+      raf = window.requestAnimationFrame(tick);
+    };
+
+    raf = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+    };
+  }, [isHome, targetProgress]);
+
+  useEffect(() => {
+    if (targetProgress >= 1 && progress >= 0.999) {
+      setReady(true);
+    }
+  }, [progress, targetProgress]);
+
+  if (!isHome) {
+    return null;
+  }
 
   const percent = Math.round(progress * 100);
 
@@ -64,9 +120,7 @@ export function Preloader() {
 
   const handleEnter = (withSound: boolean) => {
     if (!ready) return;
-    setEntered(true);
-    const detail: SoundSetDetail = { enabled: withSound };
-    window.dispatchEvent(new CustomEvent<SoundSetDetail>("sound:set", { detail }));
+    enter(withSound);
   };
 
   return (

@@ -3,6 +3,7 @@ import "../styles/bundle.87ba3613.css";
 import "../styles/bundle.ee0b1c10.css";
 import "../styles/overrides.css";
 import "./globals.css";
+import { UiStateProvider } from "../components/site/UiStateProvider";
 
 export const metadata: Metadata = {
   title: "Rogier de Boeve - Portfolio 2024",
@@ -30,8 +31,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className="is-locked">
+      <body>
+        <UiStateProvider>{children}</UiStateProvider>
+      </body>
     </html>
   );
 }

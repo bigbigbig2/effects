@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { ExperienceMount } from "../ExperienceMount";
 import { Preloader } from "./Preloader";
 import { SiteHeader } from "./SiteHeader";
 import { SiteNav } from "./SiteNav";
 import { SoundToggle } from "./SoundToggle";
+import { ExperienceGate } from "./ExperienceGate";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -12,7 +12,7 @@ type SiteShellProps = {
 export function SiteShell({ children }: SiteShellProps) {
   return (
     <>
-      <ExperienceMount />
+      <ExperienceGate />
       <div className="ui">
         <SiteHeader />
         <main className="ui-main">{children}</main>
