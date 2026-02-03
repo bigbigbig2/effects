@@ -1,20 +1,22 @@
 import Lenis from "lenis";
 
-type ScrollEvent = {
-  velocity: number;
-};
-
 type ScrollToOptions = {
   immediate?: boolean;
+  duration?: number;
+  easing?: (t: number) => number;
+  lock?: boolean;
 };
 
 export class ScrollDriver {
   readonly lenis: Lenis;
   progress = 0;
   velocity = 0;
+  direction: 1 | -1 | 0 = 0;
 
-  private onScroll = ({ velocity }: ScrollEvent) => {
-    this.velocity = velocity;
+  private onScroll = (lenis: Lenis) => {
+    this.velocity = lenis.velocity;
+    this.direction = lenis.direction;
+    this.progress = lenis.progress;
   };
 
   constructor() {
@@ -32,25 +34,22 @@ export class ScrollDriver {
   update() {
     this.lenis.raf(performance.now());
 
-    const maxScroll =
-      document.documentElement.scrollHeight - window.innerHeight;
-
-    if (maxScroll > 0) {
-      this.progress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
-    } else {
-      this.progress = 0;
-    }
+    this.progress = this.lenis.progress;
+    this.velocity = this.lenis.velocity;
+    this.direction = this.lenis.direction;
   }
 
   scrollToProgress(progress: number, options: ScrollToOptions = {}) {
-    const maxScroll =
+    const fallback =
       document.documentElement.scrollHeight - window.innerHeight;
+    const maxScroll = this.lenis.limit || fallback;
     const target = Math.min(1, Math.max(0, progress)) * maxScroll;
 
     this.lenis.scrollTo(target, {
       immediate: options.immediate ?? false,
-      duration: 1.2,
-      easing: (t: number) => 1 - Math.pow(1 - t, 3),
+      duration: options.duration ?? 1.2,
+      easing: options.easing ?? ((t: number) => 1 - Math.pow(1 - t, 3)),
+      lock: options.lock ?? false,
     });
   }
 

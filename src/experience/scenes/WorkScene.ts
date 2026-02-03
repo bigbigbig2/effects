@@ -37,6 +37,8 @@ export class WorkScene {
 
   private ambientLight: THREE.AmbientLight;
   private spotLight: THREE.SpotLight | null = null;
+  private directionalLight: THREE.DirectionalLight | null = null;
+  private directionalLight2: THREE.DirectionalLight | null = null;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -82,13 +84,13 @@ export class WorkScene {
     this.scene.add(this.spotLight);
     this.scene.add(this.spotLight.target);
 
-    const directional = new THREE.DirectionalLight(0xffffff, 1.5);
-    directional.position.set(10.5, 10, 1);
-    this.scene.add(directional);
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    this.directionalLight.position.set(10.5, 10, 1);
+    this.scene.add(this.directionalLight);
 
-    const directional2 = new THREE.DirectionalLight(0xffffff, 1);
-    directional2.position.set(-10.5, 5, -1);
-    this.scene.add(directional2);
+    this.directionalLight2 = new THREE.DirectionalLight(0xffffff, 1);
+    this.directionalLight2.position.set(-10.5, 5, -1);
+    this.scene.add(this.directionalLight2);
   }
 
   private setBlocks(
@@ -151,6 +153,19 @@ export class WorkScene {
 
   setActiveIndex(index: number) {
     this.activeIndex = index;
+  }
+
+  setVisibilityMode(onlyActive: boolean) {
+    this.onlyActiveVisible = onlyActive;
+  }
+
+  setLightIntensity(ambient: number, spot: number) {
+    if (this.ambientLight) {
+      this.ambientLight.intensity = ambient;
+    }
+    if (this.spotLight) {
+      this.spotLight.intensity = spot;
+    }
   }
 
   resize(width: number, height: number, dpr: number) {

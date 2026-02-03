@@ -101,3 +101,84 @@ body {
 .scroll-spacer {
   height: 300vh;
 }
+
+.debug-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 320px;
+  max-height: 80vh;
+  overflow: auto;
+  background: rgba(10, 10, 10, 0.9);
+  color: #f2f2f2;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  z-index: 50;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.debug-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.debug-panel-title {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.debug-panel-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.debug-panel-btn {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: inherit;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.debug-panel-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.debug-panel-section-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.debug-panel-field {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.debug-panel-field input[type="range"] {
+  width: 100%;
+}
+
+.debug-panel-field input[type="checkbox"] {
+  justify-self: start;
+}
+
+.debug-panel-hint {
+  margin-top: 8px;
+  opacity: 0.6;
+  font-size: 11px;
+}

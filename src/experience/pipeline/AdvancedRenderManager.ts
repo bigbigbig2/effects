@@ -479,13 +479,17 @@ export class AdvancedRenderManager {
     });
   }
 
-  private bloomFactors() {
+  protected bloomFactors() {
     const factors = [1, 0.8, 0.6, 0.4, 0.2];
     for (let i = 0; i < this.nMips; i += 1) {
       const v = factors[i];
       factors[i] = this.settings.bloom.strength * lerp(v, 1.2 - v, this.settings.bloom.radius);
     }
     return factors;
+  }
+
+  updateBloom() {
+    this.bloomMaterial.uniforms.uBloomFactors.value = this.bloomFactors();
   }
 
   resize(width: number, height: number, dpr: number) {
