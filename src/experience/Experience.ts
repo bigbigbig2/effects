@@ -5,6 +5,7 @@ import { Assets } from "./core/Assets";
 import { WorkScene } from "./scenes/WorkScene";
 import { MediaScene } from "./scenes/MediaScene";
 import { WavvesScene } from "./scenes/WavvesScene";
+import { WorkThumbScene } from "./scenes/WorkThumbScene";
 import { MainComposite } from "./pipeline/MainComposite";
 import { ScrollDriver } from "./motion/ScrollDriver";
 import { TweenDriver } from "./motion/TweenDriver";
@@ -34,6 +35,7 @@ export class Experience {
   private workScene: WorkScene;
   private mediaScene: MediaScene;
   private wavvesScene: WavvesScene;
+  private workThumbScene: WorkThumbScene;
   private mainComposite: MainComposite;
   private scroll: ScrollDriver;
   private tween: TweenDriver;
@@ -41,6 +43,7 @@ export class Experience {
   private onResize = () => this.resize();
   private onSelect = (event: Event) => this.handleSelect(event as CustomEvent<UiSelectDetail>);
   private activeIndex = 0;
+  private mediaEnabled = false;
 
   constructor({ canvas, container }: ExperienceOptions) {
     this.renderer = new Renderer({ canvas, container });
@@ -56,12 +59,17 @@ export class Experience {
     });
     this.mediaScene = new MediaScene(this.renderer.instance, this.assets, projects);
     this.wavvesScene = new WavvesScene(this.renderer.instance);
+    this.workThumbScene = new WorkThumbScene(
+      this.renderer.instance,
+      this.assets,
+      projects
+    );
     this.mainComposite = new MainComposite(this.renderer.instance, {
       noise: null,
       perlin: null,
     });
     this.workScene.setActiveIndex(0);
-    this.mediaScene.setActiveIndex(0);
+    this.workScene.setSpotLightMap(this.workThumbScene.texture);
 
     this.loadCoreTextures();
 
@@ -117,6 +125,7 @@ export class Experience {
     this.workScene.resize(width, height, pixelRatio);
     this.mediaScene.resize(width, height, pixelRatio);
     this.wavvesScene.resize(width, height, pixelRatio);
+    this.workThumbScene.resize(width, height, 1);
     this.mainComposite.resize(width, height);
   }
 
@@ -138,7 +147,9 @@ export class Experience {
     this.activeIndex = index;
 
     this.workScene.setActiveIndex(index);
-    this.mediaScene.setActiveIndex(index);
+    if (this.mediaEnabled) {
+      this.mediaScene.setActiveIndex(index);
+    }
 
     const detail: UiActiveDetail = { index, progress };
     window.dispatchEvent(new CustomEvent<UiActiveDetail>("ui:active", { detail }));
@@ -151,6 +162,7 @@ export class Experience {
     const { width, height, pixelRatio } = this.renderer.sizes;
 
     this.wavvesScene.update(elapsed);
+    this.workThumbScene.update(-this.tween.progress);
     this.workScene.update({
       time: elapsed,
       delta,
@@ -170,7 +182,7 @@ export class Experience {
     this.mainComposite.render({
       time: elapsed,
       work: this.workScene.texture,
-      media: this.mediaScene.texture,
+      media: this.mediaEnabled ? this.mediaScene.texture : null,
       mouse: mouseTexture,
       bloom: bloomTexture,
       ratio: width / height,

@@ -32,6 +32,7 @@ export class WorkScene {
   private targetTheta = 0;
   private activeIndex = 0;
   private onlyActiveVisible = true;
+  private rotationOffset = Math.PI;
 
   private ambientLight: THREE.AmbientLight;
   private spotLight: THREE.SpotLight | null = null;
@@ -61,6 +62,9 @@ export class WorkScene {
 
     this.setLights();
     this.setBlocks(projects, renderer, textures);
+    this.currentTheta = this.rotationOffset;
+    this.targetTheta = this.rotationOffset;
+    this.blocksWrap.rotation.y = this.rotationOffset;
 
     this.sceneWrap.add(this.blocksWrap);
     this.scene.add(this.sceneWrap);
@@ -137,6 +141,12 @@ export class WorkScene {
     this.scene.environment = texture;
   }
 
+  setSpotLightMap(texture: THREE.Texture) {
+    if (!this.spotLight) return;
+    this.spotLight.map = texture;
+    this.spotLight.needsUpdate = true;
+  }
+
   setActiveIndex(index: number) {
     this.activeIndex = index;
   }
@@ -150,7 +160,7 @@ export class WorkScene {
 
   update({ time, delta, dpr, input, tween, displacementTexture, size }: WorkSceneUpdate) {
     const progress = tween.progress;
-    this.targetTheta = -progress * Math.PI * 2;
+    this.targetTheta = -progress * Math.PI * 2 + this.rotationOffset;
     this.currentTheta += (this.targetTheta - this.currentTheta) * Math.min(1, delta * 4);
     this.blocksWrap.rotation.y = this.currentTheta;
 

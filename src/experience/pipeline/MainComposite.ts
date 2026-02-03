@@ -253,7 +253,7 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         uPerlin: { value: 0.1 },
         uBgColor: { value: new THREE.Color("#1F1F1F").convertLinearToSRGB() },
         uReveal: { value: 1 },
-        uMediaReveal: { value: 1 },
+        uMediaReveal: { value: 0 },
         uContrast: { value: 1.1 },
         uTransformX: { value: 0 },
         uFluidStrength: { value: 0.5 },
