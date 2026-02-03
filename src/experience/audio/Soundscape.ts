@@ -1,24 +1,78 @@
-﻿import { Howl } from "howler";
+import { Howl } from "howler";
+
+type SoundSetDetail = {
+  enabled: boolean;
+};
 
 export class Soundscape {
   private ambient?: Howl;
   private enabled = false;
+  private onToggle = () => this.setEnabled(!this.enabled);
+  private onSet = (event: Event) => {
+    const detail = (event as CustomEvent<SoundSetDetail>).detail;
+    if (!detail) return;
+    this.setEnabled(detail.enabled);
+  };
 
   constructor() {
-    // Placeholder: wire real audio once assets are ready.
+    if (typeof window !== "undefined") {
+      window.addEventListener("sound:toggle", this.onToggle);
+      window.addEventListener("sound:set", this.onSet as EventListener);
+    }
   }
 
-  enable() {
-    this.enabled = true;
+  private ensureAmbient() {
+    if (this.ambient) return;
+    this.ambient = new Howl({
+      src: ["/audio/ambient.webm"],
+      loop: true,
+      volume: 0,
+      html5: true,
+    });
+  }
+
+  private emitState() {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent<SoundSetDetail>("sound:state", {
+        detail: { enabled: this.enabled },
+      })
+    );
+  }
+
+  private setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    this.ensureAmbient();
+
+    if (!this.ambient) return;
+
+    if (this.enabled) {
+      if (!this.ambient.playing()) {
+        this.ambient.play();
+      }
+    } else {
+      this.ambient.pause();
+    }
+
+    this.emitState();
   }
 
   update(velocity: number) {
     if (!this.ambient || !this.enabled) return;
-    const volume = Math.min(1, Math.max(0, velocity * 0.02));
+
+    const speed = Math.min(1, Math.max(0, Math.abs(velocity) * 0.02));
+    const volume = 0.15 + speed * 0.35;
+    const rate = 0.9 + speed * 0.2;
+
     this.ambient.volume(volume);
+    this.ambient.rate(rate);
   }
 
   destroy() {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("sound:toggle", this.onToggle);
+      window.removeEventListener("sound:set", this.onSet as EventListener);
+    }
     if (this.ambient) {
       this.ambient.unload();
     }

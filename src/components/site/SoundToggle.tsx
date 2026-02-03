@@ -1,6 +1,47 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+type SoundStateDetail = {
+  enabled: boolean;
+};
+
 export function SoundToggle() {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const handleState = (event: Event) => {
+      const detail = (event as CustomEvent<SoundStateDetail>).detail;
+      if (!detail) return;
+      setEnabled(detail.enabled);
+    };
+
+    window.addEventListener("sound:state", handleState as EventListener);
+
+    return () => {
+      window.removeEventListener("sound:state", handleState as EventListener);
+    };
+  }, []);
+
+  const handleToggle = useCallback(() => {
+    window.dispatchEvent(new Event("sound:toggle"));
+  }, []);
+
   return (
-    <div className="ui-sound-toggle c-color" data-sound-click="">
+    <div
+      className={`ui-sound-toggle c-color${enabled ? " is-active" : ""}`}
+      data-sound-click=""
+      role="button"
+      tabIndex={0}
+      aria-pressed={enabled}
+      onClick={handleToggle}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleToggle();
+        }
+      }}
+    >
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect
           className="ui-sound-toggle-static"

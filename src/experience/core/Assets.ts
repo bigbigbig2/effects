@@ -1,18 +1,65 @@
-﻿import * as THREE from "three";
+import * as THREE from "three";
+
+type ProgressDetail = {
+  loaded: number;
+  total: number;
+  progress: number;
+};
 
 export class Assets {
   private loader = new THREE.TextureLoader();
+  private total = 0;
+  private loaded = 0;
 
   async loadTexture(src: string, fallback?: string): Promise<THREE.Texture> {
     try {
-      const texture = await this.load(src);
+      const texture = await this.loadWithProgress(src);
       return this.configure(texture);
     } catch (error) {
       if (fallback) {
-        const texture = await this.load(fallback);
-        return this.configure(texture);
+        try {
+          const texture = await this.loadWithProgress(fallback);
+          return this.configure(texture);
+        } catch (fallbackError) {
+          return this.createFallbackTexture();
+        }
       }
       return this.createFallbackTexture();
+    }
+  }
+
+  private async loadWithProgress(src: string) {
+    this.beginLoad();
+    try {
+      return await this.load(src);
+    } finally {
+      this.endLoad();
+    }
+  }
+
+  private beginLoad() {
+    this.total += 1;
+    this.emitProgress();
+  }
+
+  private endLoad() {
+    this.loaded += 1;
+    this.emitProgress();
+  }
+
+  private emitProgress() {
+    if (typeof window === "undefined") return;
+    const progress = this.total > 0 ? this.loaded / this.total : 0;
+    const detail: ProgressDetail = {
+      loaded: this.loaded,
+      total: this.total,
+      progress,
+    };
+
+    window.dispatchEvent(new CustomEvent<ProgressDetail>("assets:progress", { detail }));
+
+    if (this.total > 0 && this.loaded >= this.total) {
+      window.dispatchEvent(new Event("assets:complete"));
     }
   }
 

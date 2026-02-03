@@ -1,4 +1,4 @@
-﻿import * as THREE from "three";
+import * as THREE from "three";
 
 type RendererOptions = {
   canvas: HTMLCanvasElement;
@@ -30,6 +30,7 @@ export class Renderer {
       pixelRatio: 1,
     };
 
+    this.instance.outputColorSpace = THREE.SRGBColorSpace;
     this.instance.setClearColor(0x0c0f12, 1);
     this.resize();
   }

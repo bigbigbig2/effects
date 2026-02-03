@@ -10,10 +10,6 @@ body {
   opacity: 1 !important;
 }
 
-.preloader {
-  display: none !important;
-}
-
 .ui-title-inner,
 .ui-header-part-inner,
 .ui-header-secondary .ts-m > *,
@@ -32,13 +28,28 @@ body {
   opacity: 1 !important;
 }
 
-.ui-work-cta {
+.ui-work-ul li.is-active .ui-work-cta {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
 
 .ui-work-ul li > .ui-work-a {
   pointer-events: auto !important;
+}
+
+.ui-sound-toggle {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.preloader {
+  opacity: 1;
+  transition: opacity 0.6s var(--expo-out);
+}
+
+.preloader.is-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .scroll-spacer {

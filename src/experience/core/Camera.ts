@@ -12,7 +12,7 @@ export class Camera {
       100
     );
 
-    this.instance.position.set(0, 0, 6);
+    this.instance.position.set(0, 0, 3);
     this.instance.lookAt(0, 0, 0);
   }
 

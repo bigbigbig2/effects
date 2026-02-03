@@ -1,7 +1,8 @@
-﻿import * as THREE from "three";
+import * as THREE from "three";
 import type { Input } from "../core/Input";
 import type { Camera } from "../core/Camera";
 import type { ScrollDriver } from "../motion/ScrollDriver";
+import type { TweenDriver } from "../motion/TweenDriver";
 import type { Assets } from "../core/Assets";
 import { CubeGridScreen } from "./CubeGridScreen";
 import { ProjectionMaterial } from "./ProjectionMaterial";
@@ -11,6 +12,7 @@ type UpdateParams = {
   delta: number;
   elapsed: number;
   scroll: ScrollDriver;
+  tween: TweenDriver;
   input: Input;
   camera: Camera;
 };
@@ -86,12 +88,15 @@ export class ScreenRing {
     }
   }
 
-  update({ delta, scroll, input, camera }: UpdateParams) {
-    this.targetTheta = -scroll.progress * Math.PI * 2;
+  update({ delta, scroll, tween, input, camera }: UpdateParams) {
+    const progress = tween.progress;
+    const velocity = tween.velocity;
+
+    this.targetTheta = -progress * Math.PI * 2;
     this.currentTheta += (this.targetTheta - this.currentTheta) * Math.min(1, delta * 4);
     this.group.rotation.y = this.currentTheta;
 
-    const parallaxX = input.pointer.normX * this.parallaxScale + scroll.velocity * this.velocityScale;
+    const parallaxX = input.pointer.normX * this.parallaxScale + velocity * this.velocityScale;
     const parallaxY = -input.pointer.normY * this.parallaxScale;
 
     this.tempForward.set(0, 0, -1).applyQuaternion(camera.instance.quaternion);

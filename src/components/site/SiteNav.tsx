@@ -1,11 +1,19 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 export function SiteNav() {
+  const pathname = usePathname();
+  const isAbout = pathname.startsWith("/about");
+  const isHome = !isAbout;
+
   return (
     <nav className="ui-nav">
       <div className="wrap">
         <div className="grid grid-cols-24 gap-24 items-end">
           <div className="ui-nav-items col-span-4 lg:col-span-2">
             <div className="ui-nav-item">
-              <a className="ui-nav-a c-color" href="/" data-slug="home">
+              <a className={`ui-nav-a c-color${isHome ? " is-active" : ""}`} href="/" data-slug="home">
                 <span className="ui-nav-a-inner">
                   <span className="ui-nav-a-icon">
                     <svg
@@ -26,15 +34,7 @@ export function SiteNav() {
                         fill="currentColor"
                         strokeWidth="0"
                       />
-                      <rect
-                        rx="1"
-                        ry="1"
-                        y="4"
-                        width="2"
-                        height="2"
-                        fill="currentColor"
-                        strokeWidth="0"
-                      />
+                      <rect rx="1" ry="1" y="4" width="2" height="2" fill="currentColor" strokeWidth="0" />
                     </svg>
                   </span>
                   <span className="ui-nav-a-title">Work</span>
@@ -42,7 +42,7 @@ export function SiteNav() {
               </a>
             </div>
             <div className="ui-nav-item">
-              <a className="ui-nav-a c-color" href="/about/" data-slug="about">
+              <a className={`ui-nav-a c-color${isAbout ? " is-active" : ""}`} href="/about/" data-slug="about">
                 <span className="ui-nav-a-inner">
                   <span className="ui-nav-a-icon">
                     <svg
@@ -63,15 +63,7 @@ export function SiteNav() {
                         fill="currentColor"
                         strokeWidth="0"
                       />
-                      <rect
-                        rx="1"
-                        ry="1"
-                        y="4"
-                        width="2"
-                        height="2"
-                        fill="currentColor"
-                        strokeWidth="0"
-                      />
+                      <rect rx="1" ry="1" y="4" width="2" height="2" fill="currentColor" strokeWidth="0" />
                     </svg>
                   </span>
                   <span className="ui-nav-a-title">About</span>

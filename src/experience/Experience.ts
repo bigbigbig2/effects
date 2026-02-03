@@ -1,4 +1,4 @@
-﻿import { Renderer } from "./core/Renderer";
+import { Renderer } from "./core/Renderer";
 import { Scene } from "./core/Scene";
 import { Camera } from "./core/Camera";
 import { Time } from "./core/Time";
@@ -53,15 +53,16 @@ export class Experience {
 
   private update(delta: number, elapsed: number) {
     this.scroll.update();
-    this.tween.update(delta);
+    this.tween.update(this.scroll.progress, this.scroll.velocity);
     this.world.update({
       delta,
       elapsed,
       scroll: this.scroll,
+      tween: this.tween,
       input: this.input,
       camera: this.camera,
     });
-    this.sound.update(this.scroll.velocity);
+    this.sound.update(this.tween.velocity);
     this.composer.render();
   }
 
@@ -70,6 +71,7 @@ export class Experience {
     this.time.stop();
     this.input.destroy();
     this.scroll.destroy();
+    this.tween.destroy();
     this.sound.destroy();
     this.world.destroy();
     this.assets.destroy();
