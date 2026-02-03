@@ -1,15 +1,47 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type UiActiveDetail = {
+  index: number;
+  progress: number;
+};
+
 export function HomeView() {
-  const items = [
-    { slug: "following-wildfire", title: "Following Wildfire" },
-    { slug: "engaged", title: "Engaged" },
-    { slug: "spritexmarvel", title: "Sprite x Marvel" },
-    { slug: "filmsecession", title: "Film Secession" },
-    { slug: "theroger", title: "The Roger" },
-    { slug: "poppr", title: "Poppr" },
-    { slug: "demorgen", title: "De Morgen" },
-    { slug: "glenncatteeuw", title: "Glenn Catteeuw" },
-    { slug: "thoughtlab", title: "Thoughtlab" },
-  ];
+  const items = useMemo(
+    () => [
+      { slug: "following-wildfire", title: "Following Wildfire" },
+      { slug: "engaged", title: "Engaged" },
+      { slug: "spritexmarvel", title: "Sprite x Marvel" },
+      { slug: "filmsecession", title: "Film Secession" },
+      { slug: "theroger", title: "The Roger" },
+      { slug: "poppr", title: "Poppr" },
+      { slug: "demorgen", title: "De Morgen" },
+      { slug: "glenncatteeuw", title: "Glenn Catteeuw" },
+      { slug: "thoughtlab", title: "Thoughtlab" },
+    ],
+    []
+  );
+
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const handleActive = (event: Event) => {
+      const detail = (event as CustomEvent<UiActiveDetail>).detail;
+      if (!detail) return;
+      setActiveIndex(detail.index);
+    };
+
+    window.addEventListener("ui:active", handleActive as EventListener);
+
+    return () => {
+      window.removeEventListener("ui:active", handleActive as EventListener);
+    };
+  }, []);
+
+  const handleSelect = (index: number) => {
+    window.dispatchEvent(new CustomEvent("ui:select", { detail: { index } }));
+  };
 
   return (
     <div data-view="home" className="ui-work">
@@ -23,14 +55,27 @@ export function HomeView() {
               </div>
               <ul className="ui-work-ul">
                 {items.map((item, index) => {
-                  const isActive = index === 0;
+                  const isActive = index === activeIndex;
                   return (
                     <li
                       key={item.slug}
                       className={`c-color${isActive ? " is-active" : ""}`}
                       data-slug={item.slug}
                     >
-                      <div className="ui-work-a" data-sound="" data-sound-click="">
+                      <div
+                        className="ui-work-a"
+                        data-sound=""
+                        data-sound-click=""
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelect(index)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleSelect(index);
+                          }
+                        }}
+                      >
                         <span>{item.title}</span>
                       </div>
                       <a href={`/${item.slug}/`} data-transition="project" className="ui-work-cta">
@@ -179,10 +224,19 @@ export function HomeView() {
             {items.map((item, index) => (
               <div
                 key={item.slug}
-                className={`ui-progressbar-item${index === 0 ? " is-active" : ""}`}
+                className={`ui-progressbar-item${index === activeIndex ? " is-active" : ""}`}
                 data-slug={item.slug}
                 data-sound=""
                 data-sound-click=""
+                role="button"
+                tabIndex={0}
+                onClick={() => handleSelect(index)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleSelect(index);
+                  }
+                }}
               />
             ))}
           </div>

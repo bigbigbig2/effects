@@ -4,6 +4,10 @@ type ScrollEvent = {
   velocity: number;
 };
 
+type ScrollToOptions = {
+  immediate?: boolean;
+};
+
 export class ScrollDriver {
   readonly lenis: Lenis;
   progress = 0;
@@ -36,6 +40,18 @@ export class ScrollDriver {
     } else {
       this.progress = 0;
     }
+  }
+
+  scrollToProgress(progress: number, options: ScrollToOptions = {}) {
+    const maxScroll =
+      document.documentElement.scrollHeight - window.innerHeight;
+    const target = Math.min(1, Math.max(0, progress)) * maxScroll;
+
+    this.lenis.scrollTo(target, {
+      immediate: options.immediate ?? false,
+      duration: 1.2,
+      easing: (t: number) => 1 - Math.pow(1 - t, 3),
+    });
   }
 
   destroy() {

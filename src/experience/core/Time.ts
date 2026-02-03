@@ -1,4 +1,4 @@
-﻿export class Time {
+﻿﻿export class Time {
   private rafId = 0;
   private lastTime = 0;
   private elapsed = 0;
