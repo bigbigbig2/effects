@@ -39,6 +39,8 @@ export class WorkScene {
   private spotLight: THREE.SpotLight | null = null;
   private directionalLight: THREE.DirectionalLight | null = null;
   private directionalLight2: THREE.DirectionalLight | null = null;
+  private ground: THREE.Mesh | null = null;
+  private groundMaterial: THREE.MeshPhysicalMaterial | null = null;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -71,6 +73,9 @@ export class WorkScene {
 
     this.sceneWrap.add(this.blocksWrap);
     this.scene.add(this.sceneWrap);
+
+    this.scene.fog = new THREE.FogExp2(new THREE.Color("#1a1a1a"), 0.065);
+    this.setGround();
   }
 
   private setLights() {
@@ -126,6 +131,26 @@ export class WorkScene {
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
   }
 
+  private setGround() {
+    if (this.ground) return;
+    const geometry = new THREE.PlaneGeometry(80, 80, 1, 1);
+    this.groundMaterial = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color("#0f0f0f"),
+      roughness: 0.55,
+      metalness: 0.2,
+      transparent: true,
+      opacity: 0.65,
+      envMapIntensity: 0.8,
+    });
+    this.groundMaterial.depthWrite = false;
+    this.ground = new THREE.Mesh(geometry, this.groundMaterial);
+    this.ground.rotation.x = -Math.PI / 2;
+    this.ground.position.y = -3.6;
+    this.ground.position.z = this.sceneWrap.position.z;
+    this.ground.renderOrder = -1;
+    this.scene.add(this.ground);
+  }
+
   setPerlinTexture(texture: THREE.Texture) {
     this.blocks.forEach((block) => {
       block.instance.material.customUniforms.tPerlin.value = texture;
@@ -166,6 +191,60 @@ export class WorkScene {
     if (this.spotLight) {
       this.spotLight.intensity = spot;
     }
+  }
+
+  setFog(enabled: boolean, color: string, density: number) {
+    if (!enabled) {
+      this.scene.fog = null;
+      return;
+    }
+    const fogColor = new THREE.Color(color);
+    if (this.scene.fog instanceof THREE.FogExp2) {
+      this.scene.fog.color.copy(fogColor);
+      this.scene.fog.density = density;
+    } else {
+      this.scene.fog = new THREE.FogExp2(fogColor, density);
+    }
+  }
+
+  setGroundSettings(options: {
+    enabled: boolean;
+    color: string;
+    roughness: number;
+    metalness: number;
+    opacity: number;
+    envIntensity: number;
+    y: number;
+    scale: number;
+  }) {
+    if (!this.ground || !this.groundMaterial) return;
+    this.ground.visible = options.enabled;
+    this.groundMaterial.color.set(options.color);
+    this.groundMaterial.roughness = options.roughness;
+    this.groundMaterial.metalness = options.metalness;
+    this.groundMaterial.opacity = options.opacity;
+    this.groundMaterial.envMapIntensity = options.envIntensity;
+    this.ground.position.y = options.y;
+    this.ground.position.z = this.sceneWrap.position.z;
+    this.ground.scale.setScalar(options.scale);
+  }
+
+  setMouseSettings(config: {
+    factor: number;
+    lightness: number;
+    thickness: number;
+    persistance: number;
+    pressure: number;
+  }) {
+    this.blocks.forEach((block) => {
+      block.instance.material.customUniforms.uMouseFactor.value = config.factor;
+      block.instance.material.customUniforms.uMouseLightness.value = config.lightness;
+      block.instance.setMouseSimConfig({
+        thickness: config.thickness,
+        persistance: config.persistance,
+        pressure: config.pressure,
+      });
+    });
   }
 
   resize(width: number, height: number, dpr: number) {

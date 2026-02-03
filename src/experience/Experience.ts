@@ -306,6 +306,28 @@ export class Experience {
 
     this.workScene.setVisibilityMode(settings.work.onlyActiveVisible);
     this.workScene.setLightIntensity(settings.work.ambientIntensity, settings.work.spotIntensity);
+    this.workScene.setFog(
+      settings.work.fogEnabled,
+      settings.work.fogColor,
+      settings.work.fogDensity
+    );
+    this.workScene.setGroundSettings({
+      enabled: settings.work.groundEnabled,
+      color: settings.work.groundColor,
+      roughness: settings.work.groundRoughness,
+      metalness: settings.work.groundMetalness,
+      opacity: settings.work.groundOpacity,
+      envIntensity: settings.work.groundEnvIntensity,
+      y: settings.work.groundY,
+      scale: settings.work.groundScale,
+    });
+    this.workScene.setMouseSettings({
+      factor: settings.work.mouseFactor,
+      lightness: settings.work.mouseLightness,
+      thickness: settings.work.mouseThickness,
+      persistance: settings.work.mousePersistance,
+      pressure: settings.work.mousePressure,
+    });
 
     const mainUniforms = this.mainComposite.material.uniforms;
     mainUniforms.uContrast.value = settings.composite.contrast;

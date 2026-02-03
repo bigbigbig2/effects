@@ -209,4 +209,16 @@ export class MouseSim {
     this.renderer.setRenderTarget(null);
     this.oldPos.copy(this.newPos);
   }
+
+  setConfig(config: { persistance?: number; thickness?: number; pressure?: number }) {
+    if (config.persistance !== undefined) {
+      this.basePersistance = config.persistance;
+    }
+    if (config.thickness !== undefined) {
+      this.baseThickness = config.thickness;
+    }
+    if (config.pressure !== undefined) {
+      this.pressure = config.pressure;
+    }
+  }
 }

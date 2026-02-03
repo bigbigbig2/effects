@@ -29,6 +29,22 @@ export type ExperienceSettings = {
     onlyActiveVisible: boolean;
     ambientIntensity: number;
     spotIntensity: number;
+    fogEnabled: boolean;
+    fogColor: string;
+    fogDensity: number;
+    groundEnabled: boolean;
+    groundColor: string;
+    groundRoughness: number;
+    groundMetalness: number;
+    groundOpacity: number;
+    groundEnvIntensity: number;
+    groundY: number;
+    groundScale: number;
+    mouseFactor: number;
+    mouseLightness: number;
+    mouseThickness: number;
+    mousePersistance: number;
+    mousePressure: number;
   };
 };
 
@@ -63,6 +79,22 @@ const defaultSettings: ExperienceSettings = {
     onlyActiveVisible: true,
     ambientIntensity: 4.6,
     spotIntensity: 520,
+    fogEnabled: true,
+    fogColor: "#1a1a1a",
+    fogDensity: 0.065,
+    groundEnabled: true,
+    groundColor: "#0f0f0f",
+    groundRoughness: 0.55,
+    groundMetalness: 0.2,
+    groundOpacity: 0.65,
+    groundEnvIntensity: 0.8,
+    groundY: -3.6,
+    groundScale: 1,
+    mouseFactor: 1.4,
+    mouseLightness: 0.6,
+    mouseThickness: 0.25,
+    mousePersistance: 0.75,
+    mousePressure: 1,
   },
 };
 
@@ -83,16 +115,16 @@ export function getSettings() {
 
 export function setSettings(partial: Partial<ExperienceSettings>) {
   if (partial.controls) {
-    settings.controls = { ...settings.controls, ...partial.controls };
+    Object.assign(settings.controls, partial.controls);
   }
   if (partial.render) {
-    settings.render = { ...settings.render, ...partial.render };
+    Object.assign(settings.render, partial.render);
   }
   if (partial.composite) {
-    settings.composite = { ...settings.composite, ...partial.composite };
+    Object.assign(settings.composite, partial.composite);
   }
   if (partial.work) {
-    settings.work = { ...settings.work, ...partial.work };
+    Object.assign(settings.work, partial.work);
   }
   listeners.forEach((listener) => listener(settings));
 }

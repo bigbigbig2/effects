@@ -4,7 +4,7 @@ import { SiteHeader } from "./SiteHeader";
 import { SiteNav } from "./SiteNav";
 import { SoundToggle } from "./SoundToggle";
 import { ExperienceGate } from "./ExperienceGate";
-import { DebugPanel } from "../dev/DebugPanel";
+import { DebugGui } from "../dev/DebugGui";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -20,7 +20,7 @@ export function SiteShell({ children }: SiteShellProps) {
         <SiteNav />
         <SoundToggle />
         <Preloader />
-        <DebugPanel />
+        <DebugGui />
       </div>
     </>
   );

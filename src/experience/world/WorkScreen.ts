@@ -244,4 +244,8 @@ export class WorkScreen extends THREE.Group {
     this.planeMaterial.uniforms.uTime.value = time;
     this.material.customUniforms.tDisplacement.value = displacementTexture;
   }
+
+  setMouseSimConfig(config: { persistance?: number; thickness?: number; pressure?: number }) {
+    this.mouseSim.setConfig(config);
+  }
 }

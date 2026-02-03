@@ -228,6 +228,7 @@ varying vec3 vViewPosition;
 #include <lights_physical_pars_fragment>
 #include <transmission_pars_fragment>
 #include <shadowmap_pars_fragment>
+#include <fog_pars_fragment>
 
 float random(vec2 st)
 {
@@ -301,6 +302,7 @@ void main() {
   mixedAlpha *= uRevealSides;
 
   gl_FragColor.a = mixedAlpha;
+  #include <fog_fragment>
 }
 `;
 
@@ -319,6 +321,7 @@ export class WorkInstancedMaterial extends THREE.MeshPhysicalMaterial {
 
     this.dithering = true;
     this.transparent = true;
+    this.fog = true;
     this.envMapIntensity = 0.75;
     this.roughness = 1;
     this.depthTest = false;
