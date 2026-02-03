@@ -92,10 +92,11 @@ export class Experience {
 
   private async loadCoreTextures() {
     try {
-      const [noise, perlin1, perlin2] = await Promise.all([
+      const [noise, perlin1, perlin2, floorNormal] = await Promise.all([
         this.assets.loadTexture("/images/textures/blue-noise.png"),
         this.assets.loadTexture("/images/textures/perlin-1.webp"),
         this.assets.loadTexture("/images/textures/perlin-2.webp"),
+        this.assets.loadTexture("/images/textures/floor-normal.webp"),
       ]);
 
       noise.colorSpace = THREE.NoColorSpace;
@@ -114,6 +115,12 @@ export class Experience {
       this.workScene.setPerlinTexture(perlin1);
       this.mainComposite.setNoiseTexture(noise);
       this.mainComposite.setPerlinTexture(perlin2);
+
+      floorNormal.colorSpace = THREE.NoColorSpace;
+      floorNormal.wrapS = THREE.RepeatWrapping;
+      floorNormal.wrapT = THREE.RepeatWrapping;
+      floorNormal.repeat.set(3, 3);
+      this.workScene.setGroundNormal(floorNormal);
     } catch (error) {
       // Ignore core texture load errors; fallback textures will be used.
     }
@@ -335,6 +342,7 @@ export class Experience {
     mainUniforms.uFluidStrength.value = settings.composite.fluidStrength;
     mainUniforms.uMediaReveal.value = settings.composite.mediaReveal;
     mainUniforms.uBgColor.value.set(settings.composite.bgColor).convertLinearToSRGB();
+    mainUniforms.uMistStrength.value = settings.composite.mistStrength;
   }
 
   destroy() {

@@ -41,6 +41,7 @@ export class WorkScene {
   private directionalLight2: THREE.DirectionalLight | null = null;
   private ground: THREE.Mesh | null = null;
   private groundMaterial: THREE.MeshPhysicalMaterial | null = null;
+  private groundNormal: THREE.Texture | null = null;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -141,12 +142,18 @@ export class WorkScene {
       transparent: true,
       opacity: 0.65,
       envMapIntensity: 0.8,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.2,
     });
     this.groundMaterial.depthWrite = false;
+    if (this.groundNormal) {
+      this.groundMaterial.normalMap = this.groundNormal;
+      this.groundMaterial.normalScale.set(0.4, 0.4);
+    }
     this.ground = new THREE.Mesh(geometry, this.groundMaterial);
     this.ground.rotation.x = -Math.PI / 2;
     this.ground.position.y = -3.6;
-    this.ground.position.z = this.sceneWrap.position.z;
+    this.ground.position.z = 0;
     this.ground.renderOrder = -1;
     this.scene.add(this.ground);
   }
@@ -225,8 +232,17 @@ export class WorkScene {
     this.groundMaterial.opacity = options.opacity;
     this.groundMaterial.envMapIntensity = options.envIntensity;
     this.ground.position.y = options.y;
-    this.ground.position.z = this.sceneWrap.position.z;
+    this.ground.position.z = 0;
     this.ground.scale.setScalar(options.scale);
+  }
+
+  setGroundNormal(texture: THREE.Texture | null) {
+    this.groundNormal = texture;
+    if (this.groundMaterial && texture) {
+      this.groundMaterial.normalMap = texture;
+      this.groundMaterial.normalScale.set(0.4, 0.4);
+      this.groundMaterial.needsUpdate = true;
+    }
   }
 
   setMouseSettings(config: {

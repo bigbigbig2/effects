@@ -92,6 +92,11 @@ export function DebugGui() {
           setSettings({ composite: { mediaReveal: value } })
         );
       composite
+        .add(settings.composite, "mistStrength", 0, 1, 0.01)
+        .onChange((value: number) =>
+          setSettings({ composite: { mistStrength: value } })
+        );
+      composite
         .addColor(settings.composite, "bgColor")
         .onChange((value: string) => setSettings({ composite: { bgColor: value } }));
 

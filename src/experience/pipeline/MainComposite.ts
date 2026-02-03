@@ -101,6 +101,7 @@ uniform float uContrast;
 uniform sampler2D tPerlin;
 uniform float uTime;
 uniform float uTransformX;
+uniform float uMistStrength;
 
 in vec2 vUv;
 out vec4 FragColor;
@@ -199,6 +200,17 @@ void main() {
 
   vec4 media = rgbshift(tMedia, fluidUv, length(fluidUv + 2.5), .15 * length(fluid.xy) * uFluidStrength);
 
+  if (uMistStrength > 0.0) {
+    vec2 mistUv = vUv * 1.5;
+    mistUv.xy -= 0.5;
+    mistUv.x *= uRatio;
+    mistUv.xy += 0.5;
+    vec4 mistNoise = texture(tPerlin, mistUv + vec2(uTime * 0.02, -uTime * 0.01));
+    float mistMask = smoothstep(0.2, 0.8, mistNoise.r);
+    mistMask *= smoothstep(0.0, 0.8, 1.0 - vUv.y);
+    mixed.rgb = mix(mixed.rgb, uBgColor.rgb, mistMask * uMistStrength);
+  }
+
   mixed.rgb = mix(mixed.rgb, media.rgb, media.a * uMediaReveal);
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, .75);
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, 1.5);
@@ -257,6 +269,7 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         uContrast: { value: 1.1 },
         uTransformX: { value: 0 },
         uFluidStrength: { value: 0.5 },
+        uMistStrength: { value: 0.35 },
       },
       vertexShader: MAIN_VERTEX,
       fragmentShader: MAIN_FRAGMENT,

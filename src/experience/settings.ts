@@ -24,6 +24,7 @@ export type ExperienceSettings = {
     fluidStrength: number;
     mediaReveal: number;
     bgColor: string;
+    mistStrength: number;
   };
   work: {
     onlyActiveVisible: boolean;
@@ -74,6 +75,7 @@ const defaultSettings: ExperienceSettings = {
     fluidStrength: 0.5,
     mediaReveal: 0,
     bgColor: "#1f1f1f",
+    mistStrength: 0.35,
   },
   work: {
     onlyActiveVisible: true,
