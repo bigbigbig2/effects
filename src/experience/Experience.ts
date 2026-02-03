@@ -132,16 +132,16 @@ export class Experience {
   private handleSelect(event: CustomEvent<UiSelectDetail>) {
     const { index } = event.detail || { index: 0 };
     const count = projects.length;
-    if (count <= 1) return;
+    if (count <= 0) return;
     const clamped = Math.max(0, Math.min(count - 1, index));
-    const targetProgress = clamped / (count - 1);
+    const targetProgress = count > 0 ? clamped / count : 0;
     this.scroll.scrollToProgress(targetProgress);
   }
 
   private emitActive(progress: number) {
     const count = projects.length;
     if (count === 0) return;
-    const index = count === 1 ? 0 : Math.round(progress * (count - 1));
+    const index = count === 1 ? 0 : Math.round(progress * count) % count;
 
     if (index === this.activeIndex) return;
     this.activeIndex = index;

@@ -33,6 +33,7 @@ export class WorkScene {
   private activeIndex = 0;
   private onlyActiveVisible = true;
   private rotationOffset = Math.PI;
+  private visibleIndex = 0;
 
   private ambientLight: THREE.AmbientLight;
   private spotLight: THREE.SpotLight | null = null;
@@ -64,17 +65,17 @@ export class WorkScene {
     this.setBlocks(projects, renderer, textures);
     this.currentTheta = this.rotationOffset;
     this.targetTheta = this.rotationOffset;
-    this.blocksWrap.rotation.y = this.rotationOffset;
+    this.sceneWrap.rotation.y = this.rotationOffset;
 
     this.sceneWrap.add(this.blocksWrap);
     this.scene.add(this.sceneWrap);
   }
 
   private setLights() {
-    this.ambientLight = new THREE.AmbientLight("#464646", 1);
+    this.ambientLight = new THREE.AmbientLight("#e4e4e4", 4.6);
     this.scene.add(this.ambientLight);
 
-    this.spotLight = new THREE.SpotLight(0xffffff, 220);
+    this.spotLight = new THREE.SpotLight(0xffffff, 520);
     this.spotLight.position.set(0, 0, 3.7);
     this.spotLight.angle = Math.PI / 4;
     this.spotLight.penumbra = 0.95;
@@ -120,6 +121,7 @@ export class WorkScene {
     });
 
     this.sceneWrap.position.set(0, 0, this.radius - 0.3);
+    this.camera.lookAt(new THREE.Vector3(0, 0, 0));
   }
 
   setPerlinTexture(texture: THREE.Texture) {
@@ -160,9 +162,16 @@ export class WorkScene {
 
   update({ time, delta, dpr, input, tween, displacementTexture, size }: WorkSceneUpdate) {
     const progress = tween.progress;
-    this.targetTheta = -progress * Math.PI * 2 + this.rotationOffset;
+    this.targetTheta = this.rotationOffset + progress * Math.PI * 2;
     this.currentTheta += (this.targetTheta - this.currentTheta) * Math.min(1, delta * 4);
-    this.blocksWrap.rotation.y = this.currentTheta;
+    this.sceneWrap.rotation.y = this.currentTheta;
+
+    if (this.count > 0) {
+      const normalized = (this.currentTheta - this.rotationOffset) / (Math.PI * 2);
+      let index = Math.round(normalized * this.count) % this.count;
+      if (index < 0) index += this.count;
+      this.visibleIndex = index;
+    }
 
     if (this.spotLight) {
       this.spotLight.position.x = this.camera.position.x * 0.175;
@@ -177,7 +186,9 @@ export class WorkScene {
       block.instance.getWorldPosition(worldPos);
 
       const visible =
-        this.onlyActiveVisible ? i === this.activeIndex : !(worldPos.x > 5.5 || worldPos.x < -5.5 || worldPos.z > 5);
+        this.onlyActiveVisible
+          ? i === this.visibleIndex
+          : !(worldPos.x > 5.5 || worldPos.x < -5.5 || worldPos.z > 5);
 
       block.instance.visible = visible;
 

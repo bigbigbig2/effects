@@ -176,7 +176,7 @@ export class WorkThumbScene {
     for (let i = 0; i < items.length; i += 1) {
       const project = this.projects[i];
       const texture = await this.assets.loadTexture(
-        project.fallbackTexture,
+        project.texture,
         project.fallbackTexture
       );
       items[i].setTexture(texture);
@@ -197,4 +197,3 @@ export class WorkThumbScene {
     return this.renderManager.renderTargetComposite.texture;
   }
 }
-
