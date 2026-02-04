@@ -18,6 +18,8 @@ export type ExperienceSettings = {
     luminosityEnabled: boolean;
     luminosityThreshold: number;
     luminositySmoothing: number;
+    toneMapping: "ACES" | "Filmic" | "Reinhard" | "None";
+    toneMappingExposure: number;
   };
   composite: {
     contrast: number;
@@ -71,6 +73,8 @@ const defaultSettings: ExperienceSettings = {
     luminosityEnabled: true,
     luminosityThreshold: 0.1,
     luminositySmoothing: 0.95,
+    toneMapping: "ACES",
+    toneMappingExposure: 1,
   },
   composite: {
     contrast: 1.1,
@@ -81,12 +85,12 @@ const defaultSettings: ExperienceSettings = {
   },
   work: {
     onlyActiveVisible: false,
-    ambientIntensity: 1,
+    ambientIntensity: -2,
     spotIntensity: 220,
     fogEnabled: true,
     fogColor: "#A294FF",
-    fogNear: 17.39,
-    fogFar: 35.87,
+    fogNear: 0.0,
+    fogFar: 376,
     groundEnabled: true,
     groundColor: "#4a4a4a",
     groundRoughness: 0.93,

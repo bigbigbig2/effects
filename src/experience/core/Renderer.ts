@@ -36,6 +36,8 @@ export class Renderer {
 
     // 配置颜色空间为 sRGB，确保颜色显示正确
     this.instance.outputColorSpace = THREE.SRGBColorSpace;
+    this.instance.toneMapping = THREE.NoToneMapping;
+    this.instance.toneMappingExposure = 1;
     // 设置清除颜色（背景色），这里使用了深色
     this.instance.setClearColor(0x0c0f12, 1);
     

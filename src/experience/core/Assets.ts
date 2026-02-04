@@ -1,4 +1,4 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 
 type ProgressDetail = {
   loaded: number;   // 已加载数量
@@ -97,6 +97,7 @@ export class Assets {
     const texture = new THREE.DataTexture(data, 1, 1);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.needsUpdate = true;
+    console.warn("Using fallback white texture.");
     return texture;
   }
 

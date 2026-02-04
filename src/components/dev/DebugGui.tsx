@@ -68,6 +68,14 @@ export function DebugGui() {
       render
         .add(settings.render, "luminositySmoothing", 0, 1, 0.01)
         .onChange((value: number) => setSettings({ render: { luminositySmoothing: value } }));
+      render
+        .add(settings.render, "toneMapping", ["ACES", "Filmic", "Reinhard", "None"])
+        .onChange((value: "ACES" | "Filmic" | "Reinhard" | "None") =>
+          setSettings({ render: { toneMapping: value } })
+        );
+      render
+        .add(settings.render, "toneMappingExposure", 0.1, 2.5, 0.05)
+        .onChange((value: number) => setSettings({ render: { toneMappingExposure: value } }));
 
       const composite = gui.addFolder("Composite");
       composite

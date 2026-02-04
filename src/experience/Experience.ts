@@ -1,4 +1,4 @@
-import { Renderer } from "./core/Renderer";
+﻿import { Renderer } from "./core/Renderer";
 import { Time } from "./core/Time";
 import { Input } from "./core/Input";
 import { Assets } from "./core/Assets";
@@ -289,7 +289,7 @@ export class Experience {
 
     this.sound.update(this.tween.velocity);
 
-    const bloomTexture = this.workScene.renderManager.renderTargetsHorizontal?.[0]?.texture ?? null;
+    const bloomTexture = null;
     const mouseTexture = this.workScene.renderManager.mouseSimulation?.bufferSim.output.texture ?? null;
 
     this.mainComposite.render({
@@ -313,37 +313,22 @@ export class Experience {
     pixelRatio: number
   ) {
     const render = settings.render;
+    this.mainComposite.setToneMapping(render.toneMapping, render.toneMappingExposure);
+    this.mainComposite.setBloom({
+      enabled: render.bloomEnabled,
+      strength: render.bloomStrength,
+      radius: render.bloomRadius,
+      threshold: render.luminosityThreshold,
+      smoothing: render.luminositySmoothing,
+      luminanceEnabled: render.luminosityEnabled,
+    });
     const compositeUniforms = this.workScene.renderManager.compositeMaterial.uniforms;
     compositeUniforms.uDarken.value = render.darken;
     compositeUniforms.uSaturation.value = render.saturation;
 
     const rmSettings = this.workScene.renderManager.settings;
-    const bloomChanged =
-      render.bloomEnabled !== this.lastBloomEnabled ||
-      render.bloomStrength !== this.lastBloomStrength ||
-      render.bloomRadius !== this.lastBloomRadius;
-    const luminosityChanged =
-      render.luminosityEnabled !== this.lastLuminosityEnabled ||
-      render.luminosityThreshold !== this.lastLuminosityThreshold ||
-      render.luminositySmoothing !== this.lastLuminositySmoothing;
-
-    rmSettings.bloom.enabled = render.bloomEnabled;
-    rmSettings.bloom.strength = render.bloomStrength;
-    rmSettings.bloom.radius = render.bloomRadius;
-    rmSettings.luminosity.enabled = render.luminosityEnabled;
-    rmSettings.luminosity.threshold = render.luminosityThreshold;
-    rmSettings.luminosity.smoothing = render.luminositySmoothing;
-    this.workScene.renderManager.luminosityMaterial.uniforms.uThreshold.value =
-      render.luminosityThreshold;
-    this.workScene.renderManager.luminosityMaterial.uniforms.uSmoothing.value =
-      render.luminositySmoothing;
-
-    if (bloomChanged) {
-      this.workScene.renderManager.updateBloom();
-    }
-    if (bloomChanged || luminosityChanged) {
-      this.workScene.resize(width, height, pixelRatio);
-    }
+    rmSettings.bloom.enabled = false;
+    rmSettings.luminosity.enabled = false;
 
     this.lastBloomEnabled = render.bloomEnabled;
     this.lastBloomStrength = render.bloomStrength;
@@ -387,6 +372,7 @@ export class Experience {
     mainUniforms.uBgColor.value.set(settings.composite.bgColor).convertLinearToSRGB();
   }
 
+
   private applyProjectTheme(index: number) {
     if (index === this.lastThemeIndex) return;
     const project = projects[index];
@@ -396,7 +382,7 @@ export class Experience {
     const settings = getSettings();
     const primary = project.colors?.primary ?? "#bcbcbc";
     const secondary = project.colors?.secondary ?? "#464646";
-    const ambientIntensity = project.ambient ?? settings.work.ambientIntensity;
+    const ambientIntensity = settings.work.ambientIntensity ?? project.ambient;
     const ambientColor =
       ambientIntensity < 0 && project.colors?.invert ? project.colors.invert : secondary;
     const darken = project.darkenOverview ?? settings.render.darken;

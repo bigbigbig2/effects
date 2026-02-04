@@ -1,4 +1,13 @@
 import * as THREE from "three";
+import {
+  BlendFunction,
+  BloomEffect,
+  EffectComposer,
+  EffectPass,
+  RenderPass,
+  ToneMappingEffect,
+  ToneMappingMode,
+} from "postprocessing";
 
 const SATURATION = `
 vec3 saturation(vec3 rgb, float adjustment) {
@@ -283,6 +292,10 @@ export class MainComposite {
   readonly mesh: THREE.Mesh;
   readonly material: MainCompositeMaterial;
   private dummyTexture: THREE.Texture;
+  private composer: EffectComposer;
+  private toneMappingEffect: ToneMappingEffect;
+  private bloomEffect: BloomEffect;
+  private effectPass: EffectPass;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -310,6 +323,27 @@ export class MainComposite {
     this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
 
+    this.composer = new EffectComposer(renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.toneMappingEffect = new ToneMappingEffect({
+      mode: ToneMappingMode.ACES_FILMIC,
+    });
+    this.toneMappingEffect.uniforms.set(
+      "toneMappingExposure",
+      new THREE.Uniform(1)
+    );
+    this.bloomEffect = new BloomEffect({
+      blendFunction: BlendFunction.SCREEN,
+      intensity: 0.15,
+      radius: 0.5,
+      luminanceThreshold: 0.1,
+      luminanceSmoothing: 0.95,
+      mipmapBlur: true,
+    });
+    this.effectPass = new EffectPass(this.camera, this.toneMappingEffect, this.bloomEffect);
+    this.effectPass.renderToScreen = true;
+    this.composer.addPass(this.effectPass);
+
     this.dummyTexture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
     this.dummyTexture.needsUpdate = true;
     this.material.uniforms.tFluid.value = this.dummyTexture;
@@ -328,6 +362,39 @@ export class MainComposite {
   resize(width: number, height: number) {
     this.material.uniforms.uRatio.value = width / height;
     this.material.uniforms.uContainerSize.value.set(width, height);
+    this.composer.setSize(width, height);
+  }
+
+  setToneMapping(mode: "ACES" | "Filmic" | "Reinhard" | "None", exposure: number) {
+    const mapping: Record<typeof mode, ToneMappingMode> = {
+      ACES: ToneMappingMode.ACES_FILMIC,
+      Filmic: ToneMappingMode.CINEON,
+      Reinhard: ToneMappingMode.REINHARD,
+      None: ToneMappingMode.LINEAR,
+    };
+    this.toneMappingEffect.mode = mapping[mode];
+    const exposureUniform = this.toneMappingEffect.uniforms.get("toneMappingExposure");
+    if (exposureUniform) {
+      exposureUniform.value = exposure;
+    }
+    this.renderer.toneMappingExposure = exposure;
+    this.toneMappingEffect.blendMode.opacity.value = mode === "None" ? 0 : 1;
+  }
+
+  setBloom(options: {
+    enabled: boolean;
+    strength: number;
+    radius: number;
+    threshold: number;
+    smoothing: number;
+    luminanceEnabled?: boolean;
+  }) {
+    this.bloomEffect.blendMode.opacity.value = options.enabled ? 1 : 0;
+    this.bloomEffect.intensity = options.enabled ? options.strength : 0;
+    this.bloomEffect.radius = Math.min(1, Math.max(0, options.radius));
+    this.bloomEffect.luminanceMaterial.threshold = options.threshold;
+    this.bloomEffect.luminanceMaterial.smoothing = options.smoothing;
+    this.bloomEffect.luminancePass.enabled = options.luminanceEnabled ?? true;
   }
 
   render(options: {
@@ -353,6 +420,6 @@ export class MainComposite {
     this.material.uniforms.uFluidStrength.value = fluidStrength;
 
     this.renderer.setRenderTarget(null);
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 }
