@@ -369,7 +369,7 @@ export class Experience {
     mainUniforms.uPerlin.value = settings.composite.perlin;
     mainUniforms.uFluidStrength.value = settings.composite.fluidStrength;
     mainUniforms.uMediaReveal.value = settings.composite.mediaReveal;
-    mainUniforms.uBgColor.value.set(settings.composite.bgColor).convertLinearToSRGB();
+    mainUniforms.uBgColor.value.set(settings.composite.bgColor);
   }
 
 
@@ -400,9 +400,7 @@ export class Experience {
       darknessColor: thumb.darknessColor ?? "#000000",
       saturation: thumb.saturation ?? 1,
     });
-    this.mainComposite.material.uniforms.uBgColor.value
-      .set(mediaBackground)
-      .convertLinearToSRGB();
+    this.mainComposite.material.uniforms.uBgColor.value.set(mediaBackground);
 
     setSettings({
       render: { darken, saturation },

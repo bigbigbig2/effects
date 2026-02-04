@@ -323,7 +323,9 @@ export class MainComposite {
     this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
 
-    this.composer = new EffectComposer(renderer);
+    this.composer = new EffectComposer(renderer, {
+      frameBufferType: THREE.HalfFloatType,
+    });
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.toneMappingEffect = new ToneMappingEffect({
       mode: ToneMappingMode.ACES_FILMIC,
