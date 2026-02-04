@@ -5,29 +5,36 @@ import { Assets } from "./core/Assets";
 import { WorkScene } from "./scenes/WorkScene";
 import { MediaScene } from "./scenes/MediaScene";
 import { WavvesScene } from "./scenes/WavvesScene";
+import { SkyScene } from "./scenes/SkyScene";
 import { WorkThumbScene } from "./scenes/WorkThumbScene";
 import { MainComposite } from "./pipeline/MainComposite";
 import { ScrollDriver } from "./motion/ScrollDriver";
 import { TweenDriver } from "./motion/TweenDriver";
 import { Soundscape } from "./audio/Soundscape";
 import { projects } from "./data/projects";
-import { getSettings } from "./settings";
+import { getSettings, setSettings } from "./settings";
 import * as THREE from "three";
 
+// 体验初始化的配置选项
 export type ExperienceOptions = {
-  canvas: HTMLCanvasElement;
-  container: HTMLElement;
+  canvas: HTMLCanvasElement; // 渲染的目标 Canvas
+  container: HTMLElement;    // Canvas 的父容器，用于监听尺寸变化
 };
 
+// UI 选择事件的详情
 type UiSelectDetail = {
   index: number;
 };
 
+// UI 活动事件的详情
 type UiActiveDetail = {
   index: number;
   progress: number;
 };
 
+// Experience 类：
+// 整个 3D 体验的核心控制器（God Class）。
+// 负责初始化各个子系统（渲染器、场景、资源、输入等），并管理主循环。
 export class Experience {
   private renderer: Renderer;
   private time: Time;
@@ -38,16 +45,23 @@ export class Experience {
   private wavvesScene: WavvesScene;
   private workThumbScene: WorkThumbScene;
   private mainComposite: MainComposite;
+  private skyScene: SkyScene;
   private scroll: ScrollDriver;
   private tween: TweenDriver;
   private sound: Soundscape;
+  
+  // 事件处理函数绑定
   private onResize = () => this.resize();
   private onSelect = (event: Event) => this.handleSelect(event as CustomEvent<UiSelectDetail>);
+  
+  // 状态变量
   private activeIndex = 0;
   private mediaEnabled = false;
   private stepIndex = 0;
   private stepCooldown = 0;
   private stepLocked = false;
+  
+  // 后处理效果的缓存值（用于平滑过渡）
   private lastBloomStrength = 0;
   private lastBloomRadius = 0;
   private lastBloomEnabled = true;
@@ -55,41 +69,66 @@ export class Experience {
   private lastLuminosityThreshold = 0;
   private lastLuminositySmoothing = 0;
 
+  private lastThemeIndex = -1;
+
   constructor({ canvas, container }: ExperienceOptions) {
+    // 1. 初始化核心系统
     this.renderer = new Renderer({ canvas, container });
     this.input = new Input(container);
     this.assets = new Assets();
     this.scroll = new ScrollDriver();
     this.tween = new TweenDriver();
     this.sound = new Soundscape();
+    this.skyScene = new SkyScene(this.renderer.instance);
+
+    // 2. 初始化各个场景
+    // WorkScene: 主作品展示场景
     this.workScene = new WorkScene(this.renderer.instance, projects, {
       perlin: null,
       noise: null,
       env: null,
     });
+    // MediaScene: 媒体详情展示场景
     this.mediaScene = new MediaScene(this.renderer.instance, this.assets, projects);
+    // WavvesScene: 背景波浪/流体效果
     this.wavvesScene = new WavvesScene(this.renderer.instance);
+    // WorkThumbScene: 作品缩略图渲染（可能用于生成光照贴图或预览）
     this.workThumbScene = new WorkThumbScene(
       this.renderer.instance,
       this.assets,
       projects
     );
+
+    // 3. 初始化合成器（后处理管线）
     this.mainComposite = new MainComposite(this.renderer.instance, {
       noise: null,
       perlin: null,
     });
+
+    // 4. 场景关联与设置
     this.workScene.setActiveIndex(0);
     this.workScene.setSpotLightMap(this.workThumbScene.texture);
+    this.applyProjectTheme(0);
+    const skyTexture = this.skyScene.texture;
+    skyTexture.wrapS = THREE.RepeatWrapping;
+    skyTexture.wrapT = THREE.RepeatWrapping;
+    this.workScene.setSkyTexture(skyTexture);
 
+    // 5. 加载核心纹理资源
     this.loadCoreTextures();
 
+    // 6. 绑定全局事件监听
     window.addEventListener("resize", this.onResize);
     window.addEventListener("ui:select", this.onSelect as EventListener);
+
+    // 7. 启动时间循环（每一帧调用 update）
     this.time = new Time((delta, elapsed) => this.update(delta, elapsed));
 
+    // 8. 初始调整尺寸
     this.resize();
   }
 
+  // 加载核心纹理（噪声、Perlin、法线贴图等）
   private async loadCoreTextures() {
     try {
       const [noise, perlin1, perlin2, floorNormal] = await Promise.all([
@@ -119,7 +158,7 @@ export class Experience {
       floorNormal.colorSpace = THREE.NoColorSpace;
       floorNormal.wrapS = THREE.RepeatWrapping;
       floorNormal.wrapT = THREE.RepeatWrapping;
-      floorNormal.repeat.set(3, 3);
+      floorNormal.repeat.set(45, 45);
       this.workScene.setGroundNormal(floorNormal);
     } catch (error) {
       // Ignore core texture load errors; fallback textures will be used.
@@ -139,6 +178,7 @@ export class Experience {
   private resize() {
     this.renderer.resize();
     const { width, height, pixelRatio } = this.renderer.sizes;
+    this.skyScene.resize(width, height, pixelRatio);
     this.workScene.resize(width, height, pixelRatio);
     this.mediaScene.resize(width, height, pixelRatio);
     this.wavvesScene.resize(width, height, pixelRatio);
@@ -174,6 +214,7 @@ export class Experience {
     if (this.mediaEnabled) {
       this.mediaScene.setActiveIndex(index);
     }
+    this.applyProjectTheme(index);
 
     const detail: UiActiveDetail = { index, progress };
     window.dispatchEvent(new CustomEvent<UiActiveDetail>("ui:active", { detail }));
@@ -232,6 +273,7 @@ export class Experience {
 
     this.applySettings(settings, width, height, pixelRatio);
 
+    this.skyScene.update(elapsed);
     this.wavvesScene.update(elapsed);
     this.workThumbScene.update(-this.tween.progress);
     this.workScene.update({
@@ -256,6 +298,7 @@ export class Experience {
       media: this.mediaEnabled ? this.mediaScene.texture : null,
       mouse: mouseTexture,
       bloom: bloomTexture,
+      fluid: this.wavvesScene.texture,
       ratio: width / height,
       fluidStrength: settings.composite.fluidStrength,
     });
@@ -314,7 +357,8 @@ export class Experience {
     this.workScene.setFog(
       settings.work.fogEnabled,
       settings.work.fogColor,
-      settings.work.fogDensity
+      settings.work.fogNear,
+      settings.work.fogFar
     );
     this.workScene.setGroundSettings({
       enabled: settings.work.groundEnabled,
@@ -326,6 +370,7 @@ export class Experience {
       y: settings.work.groundY,
       scale: settings.work.groundScale,
     });
+    this.workScene.setEnvironmentTint(settings.work.envTint);
     this.workScene.setMouseSettings({
       factor: settings.work.mouseFactor,
       lightness: settings.work.mouseLightness,
@@ -340,7 +385,55 @@ export class Experience {
     mainUniforms.uFluidStrength.value = settings.composite.fluidStrength;
     mainUniforms.uMediaReveal.value = settings.composite.mediaReveal;
     mainUniforms.uBgColor.value.set(settings.composite.bgColor).convertLinearToSRGB();
-    mainUniforms.uMistStrength.value = settings.composite.mistStrength;
+  }
+
+  private applyProjectTheme(index: number) {
+    if (index === this.lastThemeIndex) return;
+    const project = projects[index];
+    if (!project) return;
+    this.lastThemeIndex = index;
+
+    const settings = getSettings();
+    const primary = project.colors?.primary ?? "#bcbcbc";
+    const secondary = project.colors?.secondary ?? "#464646";
+    const ambientIntensity = project.ambient ?? settings.work.ambientIntensity;
+    const ambientColor =
+      ambientIntensity < 0 && project.colors?.invert ? project.colors.invert : secondary;
+    const darken = project.darkenOverview ?? settings.render.darken;
+    const saturation = project.saturation ?? settings.render.saturation;
+    const contrast = project.contrast ?? settings.composite.contrast;
+    const mediaBackground = project.colors?.media ?? primary;
+    const thumb = project.thumbnail ?? {};
+
+    this.setMainColor(primary);
+    this.workScene.setBlocksColor(primary);
+    this.workScene.setAmbientLight(ambientColor, ambientIntensity);
+    this.mediaScene.setBackgroundColor(mediaBackground);
+    this.workThumbScene.setThumbSettings({
+      darkness: thumb.darkness ?? 0,
+      darknessColor: thumb.darknessColor ?? "#000000",
+      saturation: thumb.saturation ?? 1,
+    });
+    this.mainComposite.material.uniforms.uBgColor.value
+      .set(mediaBackground)
+      .convertLinearToSRGB();
+
+    setSettings({
+      render: { darken, saturation },
+      composite: { contrast, bgColor: mediaBackground },
+      work: {
+        ambientIntensity,
+        mouseLightness: thumb.mouseLightness ?? settings.work.mouseLightness,
+      },
+    });
+  }
+
+  private setMainColor(color: string) {
+    if (typeof document === "undefined") return;
+    const elements = document.querySelectorAll<HTMLElement>(".c-color");
+    elements.forEach((el) => {
+      el.style.color = color;
+    });
   }
 
   destroy() {

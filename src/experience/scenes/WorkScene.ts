@@ -5,6 +5,8 @@ import { mapRange } from "../utils/math";
 import type { ProjectItem } from "../data/projects";
 import { WorkScreen } from "../world/WorkScreen";
 import { WorkRenderManager } from "../pipeline/WorkRenderManager";
+import { WorkEnvironment } from "../world/WorkEnvironment";
+import { WorkFloor } from "../world/WorkFloor";
 
 type WorkSceneUpdate = {
   time: number;
@@ -32,16 +34,18 @@ export class WorkScene {
   private targetTheta = 0;
   private activeIndex = 0;
   private onlyActiveVisible = true;
-  private rotationOffset = Math.PI;
+  private rotationOffset = 0;
   private visibleIndex = 0;
+  private rotationAdjustment = 0;
+  private rotationOffsetComputed = false;
 
   private ambientLight: THREE.AmbientLight;
   private spotLight: THREE.SpotLight | null = null;
   private directionalLight: THREE.DirectionalLight | null = null;
   private directionalLight2: THREE.DirectionalLight | null = null;
-  private ground: THREE.Mesh | null = null;
-  private groundMaterial: THREE.MeshPhysicalMaterial | null = null;
-  private groundNormal: THREE.Texture | null = null;
+
+  private floor: WorkFloor | null = null;
+  private env: WorkEnvironment | null = null;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -50,6 +54,7 @@ export class WorkScene {
   ) {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color("#1a1a1a").convertLinearToSRGB();
+    this.scene.fog = new THREE.Fog("grey", 0, 100);
 
     this.camera = new THREE.PerspectiveCamera(55, 1, 1, 2000);
     this.camera.position.set(0, 0, 5.5);
@@ -68,22 +73,32 @@ export class WorkScene {
 
     this.setLights();
     this.setBlocks(projects, renderer, textures);
-    this.currentTheta = this.rotationOffset;
-    this.targetTheta = this.rotationOffset;
-    this.sceneWrap.rotation.y = this.rotationOffset;
 
     this.sceneWrap.add(this.blocksWrap);
-    this.scene.add(this.sceneWrap);
 
-    this.scene.fog = new THREE.FogExp2(new THREE.Color("#1a1a1a"), 0.065);
-    this.setGround();
+    this.floor = new WorkFloor({
+      renderer,
+      scene: this.scene,
+      camera: this.camera,
+      fog: this.scene.fog as THREE.Fog,
+    });
+    this.floor.position.y = -1.65;
+
+    this.env = new WorkEnvironment();
+    this.env.position.y = -12.65;
+    this.env.rotation.y = -THREE.MathUtils.degToRad(this.rotationAdjustment);
+
+    this.sceneWrap.add(this.floor);
+    this.sceneWrap.add(this.env);
+    this.scene.add(this.sceneWrap);
+    this.applyRotationOffset();
   }
 
   private setLights() {
-    this.ambientLight = new THREE.AmbientLight("#e4e4e4", 4.6);
+    this.ambientLight = new THREE.AmbientLight("#464646", 1);
     this.scene.add(this.ambientLight);
 
-    this.spotLight = new THREE.SpotLight(0xffffff, 520);
+    this.spotLight = new THREE.SpotLight(0xffffff, 220);
     this.spotLight.position.set(0, 0, 3.7);
     this.spotLight.angle = Math.PI / 4;
     this.spotLight.penumbra = 0.95;
@@ -106,56 +121,58 @@ export class WorkScene {
   ) {
     this.blocks = [];
     projects.forEach((project, index) => {
+      const instance = new WorkScreen({
+        renderer,
+        camera: this.camera,
+        perlinTexture: textures.perlin,
+        noiseTexture: textures.noise,
+      });
+      instance.material.emissiveIntensity = 0.5;
+      instance.material.customUniforms.uReveal.value = 1;
+      instance.material.customUniforms.uRevealProject.value = 1;
+      instance.material.customUniforms.uRevealSides.value = 1;
+      instance.material.customUniforms.uRevealSpread.value = 0;
+      instance.material.customUniforms.uRevealSpreadSides.value = 0;
       this.blocks.push({
         id: project.slug,
         rotation: -this.theta * index,
-        instance: new WorkScreen({
-          renderer,
-          camera: this.camera,
-          perlinTexture: textures.perlin,
-          noiseTexture: textures.noise,
-        }),
+        instance,
       });
     });
 
     const { itemWidth, count } = this;
     this.radius = count > 0 ? Math.round(itemWidth / 2 / Math.tan(Math.PI / count)) : 0;
+    this.rotationAdjustment = 0;
 
     this.blocks.forEach((block, index) => {
       block.instance.position.x = -Math.sin((this.theta * index * Math.PI) / 180) * this.radius;
       block.instance.position.z = Math.cos((this.theta * index * Math.PI) / 180) * this.radius;
+      if (block.id === "demorgen") {
+        this.rotationAdjustment = block.rotation;
+      }
       block.instance.lookAt(this.blocksWrap.position);
       this.blocksWrap.add(block.instance);
     });
 
     this.sceneWrap.position.set(0, 0, this.radius - 0.3);
+    if (this.env) {
+      this.env.rotation.y = -THREE.MathUtils.degToRad(this.rotationAdjustment);
+    }
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+    this.applyRotationOffset();
   }
 
-  private setGround() {
-    if (this.ground) return;
-    const geometry = new THREE.PlaneGeometry(80, 80, 1, 1);
-    this.groundMaterial = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color("#0f0f0f"),
-      roughness: 0.55,
-      metalness: 0.2,
-      transparent: true,
-      opacity: 0.65,
-      envMapIntensity: 0.8,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.2,
-    });
-    this.groundMaterial.depthWrite = false;
-    if (this.groundNormal) {
-      this.groundMaterial.normalMap = this.groundNormal;
-      this.groundMaterial.normalScale.set(0.4, 0.4);
-    }
-    this.ground = new THREE.Mesh(geometry, this.groundMaterial);
-    this.ground.rotation.x = -Math.PI / 2;
-    this.ground.position.y = -3.6;
-    this.ground.position.z = 0;
-    this.ground.renderOrder = -1;
-    this.scene.add(this.ground);
+  private applyRotationOffset() {
+    if (this.rotationOffsetComputed) return;
+    const center = new THREE.Vector3();
+    this.sceneWrap.updateMatrixWorld(true);
+    this.sceneWrap.getWorldPosition(center);
+    const dir = new THREE.Vector3().subVectors(this.camera.position, center);
+    this.rotationOffset = Math.atan2(dir.x, dir.z);
+    this.currentTheta = this.rotationOffset;
+    this.targetTheta = this.rotationOffset;
+    this.sceneWrap.rotation.y = this.rotationOffset;
+    this.rotationOffsetComputed = true;
   }
 
   setPerlinTexture(texture: THREE.Texture) {
@@ -175,6 +192,10 @@ export class WorkScene {
 
   setEnvironment(texture: THREE.CubeTexture) {
     this.scene.environment = texture;
+  }
+
+  setSkyTexture(texture: THREE.Texture | null) {
+    this.env?.setSkyTexture(texture);
   }
 
   setSpotLightMap(texture: THREE.Texture) {
@@ -200,18 +221,47 @@ export class WorkScene {
     }
   }
 
-  setFog(enabled: boolean, color: string, density: number) {
+  setAmbientLight(color: string, intensity: number) {
+    const tone = new THREE.Color(color).convertLinearToSRGB();
+    this.ambientLight.color.copy(tone);
+    this.ambientLight.intensity = intensity;
+    this.env?.setDarkenColor(`#${tone.getHexString()}`);
+  }
+
+  setBlocksColor(color: string) {
+    const tone = new THREE.Color(color).convertLinearToSRGB();
+    this.blocks.forEach((block) => {
+      block.instance.material.emissive.copy(tone);
+    });
+  }
+
+  setEnvironmentTint(color: string) {
+    this.env?.setEnvTint(color);
+  }
+
+  setDarken(value: number) {
+    this.renderManager.compositeMaterial.uniforms.uDarken.value = value;
+  }
+
+  setSaturation(value: number) {
+    this.renderManager.compositeMaterial.uniforms.uSaturation.value = value;
+  }
+
+  setFog(enabled: boolean, color: string, near: number, far: number) {
     if (!enabled) {
       this.scene.fog = null;
+      this.floor?.setFog(null);
       return;
     }
     const fogColor = new THREE.Color(color);
-    if (this.scene.fog instanceof THREE.FogExp2) {
+    if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.copy(fogColor);
-      this.scene.fog.density = density;
+      this.scene.fog.near = near;
+      this.scene.fog.far = far;
     } else {
-      this.scene.fog = new THREE.FogExp2(fogColor, density);
+      this.scene.fog = new THREE.Fog(fogColor, near, far);
     }
+    this.floor?.setFog(this.scene.fog as THREE.Fog);
   }
 
   setGroundSettings(options: {
@@ -224,25 +274,20 @@ export class WorkScene {
     y: number;
     scale: number;
   }) {
-    if (!this.ground || !this.groundMaterial) return;
-    this.ground.visible = options.enabled;
-    this.groundMaterial.color.set(options.color);
-    this.groundMaterial.roughness = options.roughness;
-    this.groundMaterial.metalness = options.metalness;
-    this.groundMaterial.opacity = options.opacity;
-    this.groundMaterial.envMapIntensity = options.envIntensity;
-    this.ground.position.y = options.y;
-    this.ground.position.z = 0;
-    this.ground.scale.setScalar(options.scale);
+    if (!this.floor) return;
+    this.floor.visible = options.enabled;
+    this.floor.setColor(options.color);
+    this.floor.setReflectivity(options.envIntensity);
+    this.floor.setMirror(options.opacity);
+    this.floor.setRoughness(options.roughness);
+    this.floor.setMetalness(options.metalness);
+    this.floor.position.y = options.y;
+    this.floor.scale.setScalar(options.scale);
   }
 
   setGroundNormal(texture: THREE.Texture | null) {
-    this.groundNormal = texture;
-    if (this.groundMaterial && texture) {
-      this.groundMaterial.normalMap = texture;
-      this.groundMaterial.normalScale.set(0.4, 0.4);
-      this.groundMaterial.needsUpdate = true;
-    }
+    if (!texture) return;
+    this.floor?.setNormalMap(texture);
   }
 
   setMouseSettings(config: {
@@ -268,6 +313,7 @@ export class WorkScene {
     this.camera.updateProjectionMatrix();
     this.renderManager.resize(width, height, Math.min(dpr, 1.5));
     this.blocks.forEach((block) => block.instance.resize(width, height));
+    this.floor?.resize(width, height, Math.min(dpr, 1.5));
   }
 
   update({ time, delta, dpr, input, tween, displacementTexture, size }: WorkSceneUpdate) {
@@ -301,7 +347,6 @@ export class WorkScene {
           : !(worldPos.x > 5.5 || worldPos.x < -5.5 || worldPos.z > 5);
 
       block.instance.visible = visible;
-
       if (!visible) continue;
 
       block.instance.update(
@@ -334,6 +379,8 @@ export class WorkScene {
           this.renderManager.mouseSimulation.bufferSim.output.texture;
       }
     }
+
+    this.env?.update(time);
 
     this.renderManager.update({
       time,

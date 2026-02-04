@@ -25,7 +25,6 @@ export type ExperienceSettings = {
     fluidStrength: number;
     mediaReveal: number;
     bgColor: string;
-    mistStrength: number;
   };
   work: {
     onlyActiveVisible: boolean;
@@ -33,7 +32,8 @@ export type ExperienceSettings = {
     spotIntensity: number;
     fogEnabled: boolean;
     fogColor: string;
-    fogDensity: number;
+    fogNear: number;
+    fogFar: number;
     groundEnabled: boolean;
     groundColor: string;
     groundRoughness: number;
@@ -42,6 +42,7 @@ export type ExperienceSettings = {
     groundEnvIntensity: number;
     groundY: number;
     groundScale: number;
+    envTint: string;
     mouseFactor: number;
     mouseLightness: number;
     mouseThickness: number;
@@ -62,8 +63,8 @@ const defaultSettings: ExperienceSettings = {
     wheelThreshold: 120,
   },
   render: {
-    darken: 0,
-    saturation: 1,
+    darken: 0.2,
+    saturation: 0.35,
     bloomEnabled: true,
     bloomStrength: 0.15,
     bloomRadius: 1.5,
@@ -74,31 +75,32 @@ const defaultSettings: ExperienceSettings = {
   composite: {
     contrast: 1.1,
     perlin: 0.1,
-    fluidStrength: 0.5,
+    fluidStrength: 0.04,
     mediaReveal: 0,
     bgColor: "#1f1f1f",
-    mistStrength: 0.35,
   },
   work: {
-    onlyActiveVisible: true,
-    ambientIntensity: 4.6,
-    spotIntensity: 520,
+    onlyActiveVisible: false,
+    ambientIntensity: 1,
+    spotIntensity: 220,
     fogEnabled: true,
-    fogColor: "#1a1a1a",
-    fogDensity: 0.065,
+    fogColor: "#A294FF",
+    fogNear: 17.39,
+    fogFar: 35.87,
     groundEnabled: true,
-    groundColor: "#0f0f0f",
-    groundRoughness: 0.55,
+    groundColor: "#4a4a4a",
+    groundRoughness: 0.93,
     groundMetalness: 0.2,
-    groundOpacity: 0.65,
-    groundEnvIntensity: 0.8,
-    groundY: -3.6,
+    groundOpacity: 1,
+    groundEnvIntensity: 0.97,
+    groundY: -1.65,
     groundScale: 1,
-    mouseFactor: 1.4,
-    mouseLightness: 0.6,
-    mouseThickness: 0.25,
-    mousePersistance: 0.75,
-    mousePressure: 1,
+    envTint: "#ffffff",
+    mouseFactor: 0.25,
+    mouseLightness: 1,
+    mouseThickness: 0.1,
+    mousePersistance: 0.85,
+    mousePressure: 0,
   },
 };
 
@@ -111,13 +113,20 @@ const settings: ExperienceSettings = {
 
 type Listener = (value: ExperienceSettings) => void;
 
+type PartialSettings = {
+  controls?: Partial<ExperienceSettings["controls"]>;
+  render?: Partial<ExperienceSettings["render"]>;
+  composite?: Partial<ExperienceSettings["composite"]>;
+  work?: Partial<ExperienceSettings["work"]>;
+};
+
 const listeners = new Set<Listener>();
 
 export function getSettings() {
   return settings;
 }
 
-export function setSettings(partial: Partial<ExperienceSettings>) {
+export function setSettings(partial: PartialSettings) {
   if (partial.controls) {
     Object.assign(settings.controls, partial.controls);
   }

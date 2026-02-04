@@ -11,14 +11,25 @@ type WorkScreenOptions = {
   noiseTexture: THREE.Texture | null;
 };
 
+/**
+ * 工作区屏幕 (WorkScreen)
+ *
+ * 这是 3D 场景中的核心视觉组件，通常表现为一个由许多小方块组成的"云"或"墙"。
+ * 它使用 InstancedMesh 渲染大量 RoundedBoxGeometry，并结合自定义 Shader 实现复杂的动画效果。
+ *
+ * 主要功能：
+ * - 生成 3D 粒子网格
+ * - 集成鼠标交互 (MouseSim)
+ * - 射线检测平面 (RayPlane) 用于精确的鼠标拾取
+ */
 export class WorkScreen extends THREE.Group {
   readonly settings = {
-    xNum: 35,
-    yNum: 23,
-    zNum: 7,
-    size: 1.25,
-    spacing: 0.1,
-    scale: 0.09,
+    xNum: 35, // X轴方块数量
+    yNum: 23, // Y轴方块数量
+    zNum: 7,  // Z轴方块数量
+    size: 1.25, // 方块大小
+    spacing: 0.1, // 方块间距
+    scale: 0.09, // 整体缩放
   };
 
   readonly rotationWrap = new THREE.Group();
@@ -37,6 +48,7 @@ export class WorkScreen extends THREE.Group {
 
     const { renderer, camera, perlinTexture, noiseTexture } = options;
 
+    // 创建圆角立方体几何体
     this.geometry = new RoundedBoxGeometry(
       this.settings.size,
       this.settings.size,
@@ -51,8 +63,11 @@ export class WorkScreen extends THREE.Group {
       this.settings.zNum
     );
 
+    // 计算实例总数
     this.instanceCount =
       this.settings.xNum * this.settings.yNum * this.settings.zNum;
+    
+    // 创建 InstancedMesh
     this.mesh = new THREE.InstancedMesh(
       this.geometry,
       this.material,
@@ -66,9 +81,11 @@ export class WorkScreen extends THREE.Group {
     );
     this.add(this.rotationWrap);
 
+    // 初始化实例属性（颜色、位置等）
     this.createInstancedAttributes();
     this.positionInstancedMesh();
 
+    // 创建用于鼠标交互的不可见平面
     const planeGeometry = new THREE.PlaneGeometry(1, 1);
     const rayPlaneGeometry = new THREE.PlaneGeometry(1, 1);
     this.planeMaterial = new THREE.ShaderMaterial({
@@ -117,6 +134,7 @@ export class WorkScreen extends THREE.Group {
     this.planeMaterial.depthTest = false;
     this.planeMaterial.depthWrite = false;
 
+    // 射线检测平面材质
     const rayPlaneMaterial = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0,
@@ -129,6 +147,7 @@ export class WorkScreen extends THREE.Group {
     this.plane.visible = false;
     this.rayPlane.visible = false;
 
+    // 调整平面大小以覆盖网格区域
     const scaleFactor = 1.3;
     this.plane.scale.set(35 * scaleFactor, 23 * scaleFactor, 1);
     this.plane.position.set(0, 0, (23 * scaleFactor) / 2);
@@ -146,6 +165,7 @@ export class WorkScreen extends THREE.Group {
 
     this.rotationWrap.add(this.rayPlane);
 
+    // 初始化鼠标模拟器
     this.mouseSim = new MouseSim({
       renderer,
       camera,
@@ -220,7 +240,8 @@ export class WorkScreen extends THREE.Group {
   }
 
   resize(width: number, height: number) {
-    this.mouseSim.onResize(width, height);
+    // Match original: mouse sim resolution follows the plane scale, not viewport size.
+    this.mouseSim.onResize(this.plane.scale.x, this.plane.scale.y);
   }
 
   update(

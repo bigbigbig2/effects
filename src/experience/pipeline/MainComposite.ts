@@ -69,7 +69,18 @@ ${CONTRAST}
 ${RGBSHIFT}
 ${BLEND}
 
-#include <tonemapping_pars_fragment>
+vec4 coverTexture(sampler2D tex, vec2 imgSize, vec2 ouv, vec2 containerSize) {
+  vec2 s = containerSize;
+  vec2 i = imgSize;
+  float rs = s.x / s.y;
+  float ri = i.x / i.y;
+  vec2 new = rs < ri ? vec2(i.x * s.y / i.y, s.y) : vec2(s.x, i.y * s.x / i.x);
+  vec2 newOffset = (rs < ri ? vec2((new.x - s.x) / 2.0, 0.0) : vec2(0.0, (new.y - s.y) / 2.0)) / new;
+  vec2 uv = ouv * s / new + newOffset;
+  vec4 color = texture(tex, uv);
+
+  return color;
+}
 
 uniform sampler2D tScene;
 uniform sampler2D tWork;
@@ -101,7 +112,6 @@ uniform float uContrast;
 uniform sampler2D tPerlin;
 uniform float uTime;
 uniform float uTransformX;
-uniform float uMistStrength;
 
 in vec2 vUv;
 out vec4 FragColor;
@@ -111,27 +121,16 @@ float random(vec2 st)
     return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
 }
 
-vec4 coverTexture(sampler2D tex, vec2 imgSize, vec2 ouv, vec2 containerSize) {
-  vec2 s = containerSize;
-  vec2 i = imgSize;
-  float rs = s.x / s.y;
-  float ri = i.x / i.y;
-  vec2 new = rs < ri ? vec2(i.x * s.y / i.y, s.y) : vec2(s.x, i.y * s.x / i.x);
-  vec2 newOffset = (rs < ri ? vec2((new.x - s.x) / 2.0, 0.0) : vec2(0.0, (new.y - s.y) / 2.0)) / new;
-  vec2 uv = ouv * s / new + newOffset;
-  vec4 color = texture(tex, uv);
-  return color;
-}
-
 void main() {
   vec2 perlinUv = vUv * .25;
 
+  // apply ratio
   perlinUv.xy -= 0.5;
   perlinUv.x *= uRatio;
   perlinUv.xy += 0.5;
 
-  perlinUv.x -= uTime * .01;
-  perlinUv.y -= uTime * .005;
+  perlinUv.x -= uTime * .01;  
+  perlinUv.y -= uTime * .005;  
 
   perlinUv.x += uTransformX;
 
@@ -139,6 +138,7 @@ void main() {
   perlin.rgb = contrast(perlin.rgb, 5.);
 
   vec2 displacementUv = vUv * 2.;
+
   displacementUv.xy -= 0.5;
   displacementUv.x *= uRatio;
   displacementUv.xy += 0.5;
@@ -147,6 +147,7 @@ void main() {
   vec2 fluidUv = vUv + fluid.rg * -.2 * uFluidStrength;
   vec2 uv = vUv + fluid.rg * -.2 * uFluidStrength;
 
+  // vec2 uv = vUv;
   vec2 perlinCoords = vUv;
 
   float vignetteF = vignette(uv.xy, 0.1, .55, 2.0, .25);
@@ -157,11 +158,12 @@ void main() {
   }
 
   vec4 mouseSim = texture(tMouseSim, mix(perlinCoords, uv, 2.5));
-  mouseSim.rgb = contrast(mouseSim.rgb, 1.);
 
+  mouseSim.rgb = contrast(mouseSim.rgb, 1.);
+  
   float perlinVignette = vignette(perlinCoords.xy, 0.1, .35, 2.0, .5);
   float displacementVignette = vignette(uv.xy, 0.1, .5, 2.0, .5);
-
+  
   vec4 sceneDisplaced = rgbshift(tWork, uv, -1., .005);
   vec4 scene = rgbshift(tWork, uv, -1., .0005 + .1 * length(fluid.xy) * uFluidStrength);
 
@@ -185,9 +187,11 @@ void main() {
   }
 
   vec2 noiseUv = vUv;
+
   noiseUv.xy -= 0.5;
   noiseUv.x *= uRatio;
   noiseUv.xy += 0.5;
+
   noiseUv.xy *= 15.;
 
   vec4 noise = texture(tNoise, noiseUv);
@@ -195,28 +199,18 @@ void main() {
   mixed.rgb = contrast(mixed.rgb, uContrast);
   mixed.rgb *= uContrast;
 
+  // mixed.rgb += length(fluid.xy) * 1.15;
+
   mixed.rgb = saturation(mixed.rgb, 1.15);
   mixed.rgb = blend(11, mixed.rgb, uBgColor.rgb, .85);
-
+  
   vec4 media = rgbshift(tMedia, fluidUv, length(fluidUv + 2.5), .15 * length(fluid.xy) * uFluidStrength);
-
-  if (uMistStrength > 0.0) {
-    vec2 mistUv = vUv * 1.5;
-    mistUv.xy -= 0.5;
-    mistUv.x *= uRatio;
-    mistUv.xy += 0.5;
-    vec4 mistNoise = texture(tPerlin, mistUv + vec2(uTime * 0.02, -uTime * 0.01));
-    float mistMask = smoothstep(0.2, 0.8, mistNoise.r);
-    mistMask *= smoothstep(0.0, 0.8, 1.0 - vUv.y);
-    mixed.rgb = mix(mixed.rgb, uBgColor.rgb, mistMask * uMistStrength);
-  }
-
+  
   mixed.rgb = mix(mixed.rgb, media.rgb, media.a * uMediaReveal);
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, .75);
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, 1.5);
-
+ 
   FragColor = vec4(mixed.rgb, 1.);
-  #include <tonemapping_fragment>
 }
 `;
 
@@ -224,7 +218,9 @@ const MAIN_VERTEX = `
 out vec2 vUv;
 void main() {
   vUv = uv;
-  gl_Position = vec4(position, 1.0);
+  vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+  vec4 mvPosition = viewMatrix * worldPosition;
+  gl_Position = projectionMatrix * mvPosition;
 }
 `;
 
@@ -264,12 +260,11 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         uDisplacement: { value: 0.1 },
         uPerlin: { value: 0.1 },
         uBgColor: { value: new THREE.Color("#1F1F1F").convertLinearToSRGB() },
-        uReveal: { value: 1 },
+        uReveal: { value: 0 },
         uMediaReveal: { value: 0 },
         uContrast: { value: 1.1 },
         uTransformX: { value: 0 },
         uFluidStrength: { value: 0.5 },
-        uMistStrength: { value: 0.35 },
       },
       vertexShader: MAIN_VERTEX,
       fragmentShader: MAIN_FRAGMENT,
@@ -341,17 +336,20 @@ export class MainComposite {
     media: THREE.Texture | null;
     mouse?: THREE.Texture | null;
     bloom?: THREE.Texture | null;
+    fluid?: THREE.Texture | null;
     ratio: number;
     fluidStrength?: number;
   }) {
-    const { time, work, media, mouse, bloom, ratio, fluidStrength = 0 } = options;
+    const { time, work, media, mouse, bloom, fluid, ratio, fluidStrength = 0 } = options;
     this.material.uniforms.uTime.value = time;
     this.material.uniforms.uRatio.value = ratio;
     this.material.uniforms.tWork.value = work ?? this.dummyTexture;
     this.material.uniforms.tMedia.value = media ?? this.dummyTexture;
     this.material.uniforms.tMouseSim.value = mouse ?? this.dummyTexture;
     this.material.uniforms.tBloom.value = bloom ?? this.dummyTexture;
+    this.material.uniforms.tFluid.value = fluid ?? this.dummyTexture;
     this.material.uniforms.boolBloom.value = !!bloom;
+    this.material.uniforms.boolFluid.value = !!fluid;
     this.material.uniforms.uFluidStrength.value = fluidStrength;
 
     this.renderer.setRenderTarget(null);

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 
+// 晕影效果函数 (GLSL)
 const VIGNETTE = `
 float vignette(vec2 coords, float vignin, float vignout, float vignfade, float fstop) {
   float dist = distance(coords.xy, vec2(0.5, 0.5));
@@ -29,20 +30,24 @@ out vec4 FragColor;
 void main() {
   vec2 uvOff = vUv;
 
+  // 调整 UV 以保持比例
   uvOff.x -= 0.5;
   uvOff.x *= uRatio;
   uvOff.x += 0.5;
 
   vec2 uvVignette = uvOff;
 
+  // 缩放并居中波纹
   uvOff.xy -= 0.5;
   uvOff *= 5.;
   uvOff.xy += 0.5;
 
+  // 生成随时间变化的波纹强度
   float strength = 1. - abs(sin(distance(uvOff, vec2(0.5)) - 0.5 - uTime)) ;
   float vignetteF = vignette(uvVignette.xy, vignin, vignout, vignfade, .4);
 
   FragColor = vec4(vec3(strength), 1.);
+  // 应用晕影遮罩
   FragColor.rgb *= 1. - vignetteF;
 
   #include <tonemapping_fragment>
@@ -57,6 +62,8 @@ void main() {
 }
 `;
 
+// WavvesCompositeMaterial:
+// 用于渲染背景波浪效果的 Shader 材质。
 class WavvesCompositeMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -77,6 +84,8 @@ class WavvesCompositeMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// WavvesRenderManager:
+// 管理波浪效果的渲染，可能包含自己的渲染目标。
 class WavvesRenderManager {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
@@ -93,8 +102,10 @@ class WavvesRenderManager {
     this.scene = scene;
     this.camera = camera;
 
+    // 正交相机，用于全屏后处理
     this.screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.screenGeometry = new THREE.BufferGeometry();
+    // 全屏三角形，覆盖整个视口
     this.screenGeometry.setAttribute(
       "position",
       new THREE.BufferAttribute(new Float32Array([-1, 3, 0, -1, -1, 0, 3, -1, 0]), 3)

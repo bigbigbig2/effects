@@ -3,6 +3,7 @@ import type { Assets } from "../core/Assets";
 import type { ProjectItem } from "../data/projects";
 import { SimpleRenderManager } from "../pipeline/SimpleRenderManager";
 
+// GLSL 混合函数：变亮模式
 const BLEND_LIGHTEN = `
 float blendLighten(float base, float blend) {
 	return max(blend, base);
@@ -13,11 +14,13 @@ vec3 blendLighten(vec3 base, vec3 blend) {
 }
 `;
 
+// 片段着色器
 const MEDIA_FRAGMENT = `
 precision highp float;
 
 ${BLEND_LIGHTEN}
 
+// 辅助函数：根据容器尺寸裁剪/覆盖纹理 (object-fit: cover)
 vec4 coverTexture(sampler2D tex, vec2 imgSize, vec2 ouv, vec2 size) {
   vec2 s = size;
   vec2 i = imgSize;
@@ -41,23 +44,27 @@ uniform float uReveal;
 in vec2 vUv;
 out vec4 FragColor;
 
+// 圆角矩形距离场函数
 float udRoundBox( vec2 p, vec2 b, float r ) {
   return length(max(abs(p)-b+r,0.0))-r;
 }
 
 void main() {
+  // 视差效果
   float parallax = uCameraDistance * 0.0001;
   vec2 uv = vUv;
   uv.y -= parallax;
 
   vec4 color = coverTexture(tMap, uMapSize, uv, uContainerSize);
-  color.rgb = blendLighten(color.rgb, vec3(.02));
+  color.rgb = blendLighten(color.rgb, vec3(.02)); // 稍微提亮
 
+  // 圆角遮罩计算
   vec2 res = uContainerSize;
   vec2 halfRes = 0.5 * res;
   float b = udRoundBox(vUv.xy * res - halfRes, halfRes, uRadius);
   vec3 a = mix(vec3(1.0,0.0,0.0), vec3(0.0,0.0,0.0), smoothstep(0.0, 1.0, b));
 
+  // 揭示动画混合
   color.rgb = mix(color.rgb, uBackgroundColor, 1. - uReveal);
   color.a = a.x;
   FragColor = color;
@@ -78,6 +85,8 @@ void main() {
 }
 `;
 
+// MediaMaterial 类：
+// 用于显示项目媒体（图片/视频）的自定义材质，支持圆角和视差。
 class MediaMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -186,6 +195,10 @@ export class MediaScene {
   update() {
     this.plane.update();
     this.renderManager.update(this.camera, this.scene);
+  }
+
+  setBackgroundColor(color: string) {
+    this.plane.material.uniforms.uBackgroundColor.value = new THREE.Color(color);
   }
 
   get texture() {

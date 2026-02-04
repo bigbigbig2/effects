@@ -3,6 +3,7 @@ import type { Assets } from "../core/Assets";
 import type { ProjectItem } from "../data/projects";
 import { WorkThumbRenderManager } from "../pipeline/WorkThumbRenderManager";
 
+// 辅助函数：object-fit: cover 效果
 const COVER_TEXTURE = `
 vec4 coverTexture(sampler2D tex, vec2 imgSize, vec2 ouv, vec2 containerSize) {
   vec2 s = containerSize;
@@ -32,6 +33,7 @@ uniform float uTransitionSmoothness;
 in vec2 vUv;
 out vec4 FragColor;
 
+// 扫描线过渡效果
 vec4 transition(vec4 color1, vec4 color2, float progress, vec2 uv) {
   float pr = smoothstep(-uTransitionSmoothness, 0.0, uv.y - progress * (1.0 + uTransitionSmoothness));
   float s = step(pr, fract(uTransitionCount * uv.y));
@@ -55,6 +57,8 @@ void main() {
 }
 `;
 
+// ThumbMaterial:
+// 缩略图材质，支持过渡动画。
 class ThumbMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -77,6 +81,8 @@ class ThumbMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// ThumbItem:
+// 单个缩略图对象。
 class ThumbItem {
   readonly id: string;
   readonly mesh: THREE.Mesh;
@@ -186,6 +192,13 @@ export class WorkThumbScene {
   update(progress: number) {
     this.thumbs.updateGalleryProgress(progress);
     this.renderManager.update(this.camera, this.scene);
+  }
+
+  setThumbSettings(options: { darkness: number; darknessColor: string; saturation: number }) {
+    const uniforms = this.renderManager.compositeMaterial.uniforms;
+    uniforms.uDarkenIntensity.value = options.darkness;
+    uniforms.uDarkenColor.value = new THREE.Color(options.darknessColor);
+    uniforms.uSaturation.value = options.saturation;
   }
 
   resize(width: number, height: number, dpr: number) {
