@@ -1,8 +1,11 @@
 import { SiteShell } from "../../components/site/SiteShell";
 import { ProjectView } from "../../components/site/ProjectView";
 
+// 强制此页面为静态生成。
 export const dynamic = "force-static";
 
+// "Film Secession" 项目详情页 (/filmsecession)。
+// 这是一个硬编码的路由，可能优先于动态路由 [slug] 生效，或者用于特殊定制。
 export default function FilmSecessionPage() {
   return (
     <SiteShell>

@@ -12,6 +12,12 @@ export class ScrollDriver {
   progress = 0;
   velocity = 0;
   direction: 1 | -1 | 0 = 0;
+  private wheelDelta = 0;
+  private lastWheelTime = 0;
+  private onVirtualScroll = ({ deltaY }: { deltaY: number }) => {
+    this.wheelDelta += deltaY;
+    this.lastWheelTime = performance.now();
+  };
 
   private onScroll = (lenis: Lenis) => {
     this.velocity = lenis.velocity;
@@ -29,6 +35,7 @@ export class ScrollDriver {
     }
 
     this.lenis.on("scroll", this.onScroll);
+    this.lenis.on("virtual-scroll", this.onVirtualScroll);
   }
 
   update() {
@@ -37,6 +44,19 @@ export class ScrollDriver {
     this.progress = this.lenis.progress;
     this.velocity = this.lenis.velocity;
     this.direction = this.lenis.direction;
+
+    if (this.lastWheelTime && performance.now() - this.lastWheelTime > 300) {
+      this.wheelDelta = 0;
+      this.lastWheelTime = 0;
+    }
+  }
+
+  consumeWheelDirection(threshold: number) {
+    const absDelta = Math.abs(this.wheelDelta);
+    if (absDelta < threshold) return 0;
+    const dir = Math.sign(this.wheelDelta) as 1 | -1;
+    this.wheelDelta = 0;
+    return dir;
   }
 
   scrollToProgress(progress: number, options: ScrollToOptions = {}) {
@@ -55,6 +75,7 @@ export class ScrollDriver {
 
   destroy() {
     this.lenis.off("scroll", this.onScroll);
+    this.lenis.off("virtual-scroll", this.onVirtualScroll);
     this.lenis.destroy();
     if (typeof document !== "undefined") {
       document.documentElement.classList.remove("lenis", "lenis-smooth");

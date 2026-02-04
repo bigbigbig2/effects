@@ -13,23 +13,29 @@ type ProgressDetail = {
   progress: number;
 };
 
+// 预加载圆环的尺寸常量
 const CIRCLE_RADIUS = 230;
 const CIRCLE_OUTLINE_RADIUS = 224;
 
+// Preloader 组件：
+// 负责在首次访问首页时预加载核心资源（主要是纹理）。
+// 显示一个圆形的进度条，加载完成后自动隐藏。
 export function Preloader() {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const { entered, enter } = useUiState();
-  const [progress, setProgress] = useState(0);
-  const [targetProgress, setTargetProgress] = useState(0);
-  const [ready, setReady] = useState(false);
-  const hasPreloaded = useRef(false);
+  const [progress, setProgress] = useState(0); // 当前显示的进度 (0-1)
+  const [targetProgress, setTargetProgress] = useState(0); // 目标进度 (0-1)，实际加载进度
+  const [ready, setReady] = useState(false); // 是否加载完成
+  const hasPreloaded = useRef(false); // 标记是否已经执行过预加载
   const startTimeRef = useRef<number | null>(null);
-  const MIN_DURATION = 1400;
+  const MIN_DURATION = 1400; // 最小加载显示时间，防止加载太快一闪而过
 
   useEffect(() => {
+    // 仅在首页执行预加载
     if (!isHome) return;
 
+    // 监听资源加载进度事件
     const handleProgress = (event: Event) => {
       const detail = (event as CustomEvent<ProgressDetail>).detail;
       if (!detail) return;
@@ -37,6 +43,7 @@ export function Preloader() {
       setTargetProgress(nextProgress);
     };
 
+    // 监听加载完成事件
     const handleComplete = () => {
       setTargetProgress(1);
     };
@@ -44,13 +51,15 @@ export function Preloader() {
     window.addEventListener("assets:progress", handleProgress as EventListener);
     window.addEventListener("assets:complete", handleComplete);
 
+    // 触发预加载逻辑
     if (!hasPreloaded.current) {
       hasPreloaded.current = true;
       const assets = new Assets();
+      // 并行加载所有项目的纹理
       Promise.all(
         projects.map((project) => assets.loadTexture(project.texture, project.fallbackTexture))
       ).finally(() => {
-        assets.destroy();
+        assets.destroy(); // 预加载用的 Asset 实例可以销毁
         setTargetProgress(1);
       });
     }
@@ -61,6 +70,8 @@ export function Preloader() {
     };
   }, [isHome]);
 
+  // 动画循环：平滑过渡进度条
+  // 确保进度条至少显示 MIN_DURATION 毫秒
   useEffect(() => {
     if (!isHome) return;
 
@@ -72,9 +83,12 @@ export function Preloader() {
 
       const elapsed = time - startTimeRef.current;
       const timeProgress = Math.min(1, elapsed / MIN_DURATION);
+      // 最终进度是 "实际加载进度" 和 "时间进度" 的最小值
+      // 这保证了即使加载瞬间完成，进度条也会花 MIN_DURATION 走完
       const desired = Math.min(targetProgress, timeProgress);
 
       setProgress((prev) => {
+        // 缓动效果
         const next = prev + (desired - prev) * 0.1;
         if (Math.abs(next - desired) < 0.001) {
           return desired;
@@ -92,6 +106,7 @@ export function Preloader() {
     };
   }, [isHome, targetProgress]);
 
+  // 当进度达到 100% 时，设置就绪状态
   useEffect(() => {
     if (targetProgress >= 1 && progress >= 0.999) {
       setReady(true);

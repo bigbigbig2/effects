@@ -191,6 +191,7 @@ export class Experience {
       const targetProgress = this.stepIndex / count;
       const distanceToTarget = this.scroll.progress - targetProgress;
       const absDistance = Math.abs(distanceToTarget);
+      const wheelDirection = this.scroll.consumeWheelDirection(controls.wheelThreshold);
 
       this.stepCooldown = Math.max(0, this.stepCooldown - delta);
 
@@ -199,12 +200,9 @@ export class Experience {
           this.stepLocked = false;
           this.stepCooldown = Math.max(this.stepCooldown, 0.18);
         }
-      } else if (
-        this.stepCooldown === 0 &&
-        (absVelocity > controls.stepVelocity || absDistance > controls.stepDistance)
-      ) {
+      } else if (this.stepCooldown === 0 && (wheelDirection || absVelocity > controls.stepVelocity || absDistance > controls.stepDistance)) {
         const direction =
-          this.scroll.direction || (distanceToTarget === 0 ? 1 : Math.sign(distanceToTarget));
+          wheelDirection || this.scroll.direction || (distanceToTarget === 0 ? 1 : Math.sign(distanceToTarget));
         let nextIndex = this.stepIndex + direction;
         nextIndex = (nextIndex + count) % count;
         this.stepIndex = nextIndex;

@@ -2,20 +2,23 @@ import { ArrowIcon } from "./CButton";
 import { ScrollCta } from "./ScrollCta";
 import { WorkFooter } from "./WorkFooter";
 
+// 项目信息项类型（如 Client, Agency, Role 等）
 type ProjectInfoItem = {
   title: string;
   description: string;
 };
 
+// 桌面端媒体资源类型
 type ProjectMedia = {
   src: string;
   width: number;
   height: number;
   className: string;
-  poster?: string;
-  parallax?: "" | "bottom";
+  poster?: string; // 视频封面图
+  parallax?: "" | "bottom"; // 视差效果配置
 };
 
+// 移动端媒体资源类型
 type ProjectMobileMedia = {
   type: "picture" | "image";
   src: string;
@@ -24,6 +27,7 @@ type ProjectMobileMedia = {
   height: number;
 };
 
+// 下一个项目预览信息类型
 type ProjectNext = {
   slug: string;
   title: string;
@@ -31,17 +35,19 @@ type ProjectNext = {
   alt: string;
 };
 
+// ProjectView 组件的 Props 定义
 type ProjectViewProps = {
   slug: string;
   title: string;
   description: string;
-  liveUrl?: string;
+  liveUrl?: string; // 可选的实时链接
   info: ProjectInfoItem[];
   mediaDesktop: ProjectMedia[];
   mediaMobile: ProjectMobileMedia[];
   next: ProjectNext;
 };
 
+// 子组件：显示单个信息项
 function ProjectInfoItemView({ title, description }: ProjectInfoItem) {
   return (
     <div className="ui-project-info-item">
@@ -55,11 +61,13 @@ function ProjectInfoItemView({ title, description }: ProjectInfoItem) {
   );
 }
 
+// 子组件：返回首页的链接
 function ProjectBackLink() {
   return (
     <a href="/" data-transition="work" className="c-link" data-sound="" data-sound-click="">
       <span className="c-link-icon">
         <span className="c-link-icon-bg">
+          {/* 箭头 SVG */}
           <svg className="c-icon-arrow" width="28" height="28" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" xmlSpace="preserve">
             <rect
               className="c-icon-arrow-border"

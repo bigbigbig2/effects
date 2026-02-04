@@ -7,6 +7,7 @@ export type ExperienceSettings = {
     settleThreshold: number;
     unlockVelocity: number;
     lockScroll: boolean;
+    wheelThreshold: number;
   };
   render: {
     darken: number;
@@ -58,6 +59,7 @@ const defaultSettings: ExperienceSettings = {
     settleThreshold: 0.0025,
     unlockVelocity: 0.02,
     lockScroll: false,
+    wheelThreshold: 120,
   },
   render: {
     darken: 0,

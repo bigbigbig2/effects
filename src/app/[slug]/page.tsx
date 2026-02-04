@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SiteShell } from "../../components/site/SiteShell";
 import { ProjectView } from "../../components/site/ProjectView";
 
+// 缩略图映射表，将项目 slug 映射到图片路径
 const thumbMap: Record<string, string> = {
   "following-wildfire": "/images/thumbs/following-wildfire.webp",
   engaged: "/images/thumbs/engaged.webp",
@@ -14,6 +15,7 @@ const thumbMap: Record<string, string> = {
   thoughtlab: "/images/thumbs/thoughtlab.webp",
 };
 
+// 项目展示顺序
 const order = [
   "following-wildfire",
   "engaged",
@@ -26,6 +28,7 @@ const order = [
   "thoughtlab",
 ];
 
+// 项目详细数据定义
 const projects = {
   "following-wildfire": {
     title: "Following Wildfire",
@@ -99,18 +102,26 @@ type Params = {
   slug: keyof typeof projects;
 };
 
+// 静态参数生成函数。
+// Next.js 在构建时调用此函数，为 projects 对象中的每个 key 生成一个静态页面。
+// 这确保了这些动态路由页面在部署时是预渲染好的 HTML，而不是在用户访问时才生成。
 export function generateStaticParams() {
   return Object.keys(projects).map((slug) => ({ slug }));
 }
 
+// 辅助函数：获取下一个项目的 slug，用于导航
 function getNextSlug(slug: string) {
   const index = order.indexOf(slug);
   if (index === -1) return order[0];
   return order[(index + 1) % order.length];
 }
 
+// 强制静态生成
 export const dynamic = "force-static";
 
+// 动态路由页面组件。
+// 接收 URL 参数 params (包含 slug)。
+// 注意：在 Next.js 15+ 中，params 是一个 Promise，需要 await。
 export default async function ProjectFallbackPage({
   params,
 }: {
@@ -119,10 +130,12 @@ export default async function ProjectFallbackPage({
   const resolvedParams = await params;
   const project = projects[resolvedParams.slug];
 
+  // 如果找不到对应的项目，返回 404 页面
   if (!project) {
     notFound();
   }
 
+  // 计算下一个项目的信息，用于底部导航
   const nextSlug = getNextSlug(resolvedParams.slug);
   const nextTitle = projectMeta[nextSlug].title;
   const nextImage = projectMeta[nextSlug].thumb;
@@ -133,8 +146,8 @@ export default async function ProjectFallbackPage({
         slug={resolvedParams.slug}
         title={project.title}
         description={project.description}
-        liveUrl={project.liveUrl}
-        info={project.info}
+        liveUrl={"liveUrl" in project ? project.liveUrl : undefined}
+        info={project.info as unknown as { title: string; description: string }[]}
         mediaDesktop={[
           {
             src: projectMeta[resolvedParams.slug].thumb,
@@ -181,6 +194,7 @@ export default async function ProjectFallbackPage({
   );
 }
 
+// 项目元数据映射，用于快速查找标题和缩略图
 const projectMeta: Record<string, { title: string; thumb: string }> = {
   "following-wildfire": { title: "Following Wildfire", thumb: thumbMap["following-wildfire"] },
   engaged: { title: "Engaged", thumb: thumbMap.engaged },

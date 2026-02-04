@@ -2,6 +2,9 @@
 
 import { usePathname } from "next/navigation";
 
+// SiteNav 组件：
+// 全局导航栏，位于页面左侧。
+// 允许用户在 "Work" (首页) 和 "About" 页面之间切换。
 export function SiteNav() {
   const pathname = usePathname();
   const isAbout = pathname.startsWith("/about");
@@ -12,10 +15,13 @@ export function SiteNav() {
       <div className="wrap">
         <div className="grid grid-cols-24 gap-24 items-end">
           <div className="ui-nav-items col-span-4 lg:col-span-2">
+            
+            {/* 首页/作品 链接 */}
             <div className="ui-nav-item">
               <a className={`ui-nav-a c-color${isHome ? " is-active" : ""}`} href="/" data-slug="home">
                 <span className="ui-nav-a-inner">
                   <span className="ui-nav-a-icon">
+                    {/* 小方块箭头图标 */}
                     <svg
                       className="c-icon-arrow-xs"
                       width="6"
@@ -41,6 +47,8 @@ export function SiteNav() {
                 </span>
               </a>
             </div>
+
+            {/* 关于页面 链接 */}
             <div className="ui-nav-item">
               <a className={`ui-nav-a c-color${isAbout ? " is-active" : ""}`} href="/about/" data-slug="about">
                 <span className="ui-nav-a-inner">

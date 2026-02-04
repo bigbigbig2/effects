@@ -1,7 +1,13 @@
-﻿export function SiteHeader() {
+// SiteHeader 组件：
+// 全局头部导航栏。
+// 包含版本号、可用状态、Logo 和移动端菜单切换按钮。
+export function SiteHeader() {
   return (
     <header className="ui-header">
+      {/* 头部背景 */}
       <div className="ui-header-bg" />
+      
+      {/* 次级信息区域（左侧版本号，右侧可用状态） */}
       <div className="ui-header-secondary">
         <div className="wrap">
           <div className="grid grid-cols-24 gap-24">
@@ -21,9 +27,11 @@
         </div>
       </div>
 
+      {/* 主要信息区域（Logo 和职位描述） */}
       <div className="ui-header-primary">
         <div className="wrap">
           <div className="grid grid-cols-24 gap-24">
+            {/* Logo / 名字 */}
             <div className="col-span-4">
               <a href="/" className="ui-header-name c-color" aria-label="Rogier de Boeve">
                 <span className="ui-header-part-outer">
@@ -34,6 +42,7 @@
                 </span>
               </a>
             </div>
+            {/* 职位描述 */}
             <div className="col-span-4 col-start-5">
               <div className="ui-header-description c-color">
                 <span className="ui-header-part-outer">
@@ -48,10 +57,12 @@
         </div>
       </div>
 
+      {/* 移动端菜单切换按钮（仅在移动端显示） */}
       <div className="ui-header-mobile lg:hidden">
         <div className="ui-nav-mobile c-color">
           <div className="ui-nav-mobile-toggle">
             <div className="wrap">
+              {/* 汉堡菜单图标 */}
               <svg
                 className="ui-nav-mobile-toggle-icon"
                 width="56"

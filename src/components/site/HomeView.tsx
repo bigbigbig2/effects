@@ -2,12 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+// 自定义事件详情类型：当 3D 场景中的活动项改变时触发
 type UiActiveDetail = {
   index: number;
   progress: number;
 };
 
+// HomeView 组件：
+// 首页视图，主要包含项目列表（索引）。
+// 这是一个客户端组件，因为它需要响应 3D 场景的事件 (ui:active) 并分发选择事件 (ui:select)。
 export function HomeView() {
+  // 定义项目列表数据
   const items = useMemo(
     () => [
       { slug: "following-wildfire", title: "Following Wildfire" },
@@ -23,8 +28,10 @@ export function HomeView() {
     []
   );
 
+  // 当前激活的项目索引（与 3D 场景同步）
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // 监听 "ui:active" 事件：当用户在 3D 场景中滚动切换项目时，更新 React 端的 activeIndex
   useEffect(() => {
     const handleActive = (event: Event) => {
       const detail = (event as CustomEvent<UiActiveDetail>).detail;
@@ -39,6 +46,7 @@ export function HomeView() {
     };
   }, []);
 
+  // 处理项目选择：当用户点击列表项时，分发 "ui:select" 事件通知 3D 场景
   const handleSelect = (index: number) => {
     window.dispatchEvent(new CustomEvent("ui:select", { detail: { index } }));
   };
@@ -49,6 +57,7 @@ export function HomeView() {
         <div className="ui-work-container" />
         <div className="wrap">
           <div className="lg:grid grid-cols-24 gap-24">
+            {/* 项目列表区域 */}
             <div className="col-span-12 xl:col-span-10 col-start-12 lg:col-start-13 xl:col-start-15">
               <div className="ui-title ts-m c-color">
                 <span className="ui-title-inner">Index</span>
@@ -62,6 +71,7 @@ export function HomeView() {
                       className={`c-color${isActive ? " is-active" : ""}`}
                       data-slug={item.slug}
                     >
+                      {/* 列表项点击区域 */}
                       <div
                         className="ui-work-a"
                         data-sound=""
@@ -78,6 +88,7 @@ export function HomeView() {
                       >
                         <span>{item.title}</span>
                       </div>
+                      {/* "查看项目" 按钮 */}
                       <a href={`/${item.slug}/`} data-transition="project" className="ui-work-cta">
                         <span className="c-button" data-sound="" data-sound-click="">
                           <span className="c-button-bg">

@@ -1,10 +1,14 @@
 import { AboutFooter } from "./AboutFooter";
 import { ScrollCta } from "./ScrollCta";
 
+// AboutView 组件：
+// "关于"页面的主要视图内容。
+// 这是一个静态展示组件，包含个人介绍、服务品牌、合作机构和奖项列表。
 export function AboutView() {
   return (
     <div data-view="about" className="ui-about">
       <div className="wrap wrap--md">
+        {/* 头部介绍区域：包含照片（占位符）和个人简介 */}
         <div className="ui-about-hero lg:grid grid-cols-24 gap-24">
           <div className="ui-about-hero-visual lg:col-span-8 lg:col-start-6 xl:col-span-7 xl:col-start-6" />
           <div className="lg:col-start-14 lg:col-span-10 xl:col-span-8 xl:col-start-14">
@@ -21,6 +25,7 @@ export function AboutView() {
           </div>
         </div>
 
+        {/* 合作经历区域：品牌和代理商列表 */}
         <div className="ui-about-collab flex flex-col md:grid md:grid-cols-24">
           <div className="ui-about-brands md:col-span-9 lg:col-span-8 lg:col-start-6 xl:col-start-6">
             <h2 className="ts-m">Brands I&apos;ve worked for</h2>
@@ -42,10 +47,12 @@ export function AboutView() {
           </div>
         </div>
 
+        {/* 奖项和认可区域：Awwwards, Webby, Behance 等 */}
         <div className="ui-about-recognition lg:grid grid-cols-24 gap-24">
           <div className="col-span-16 col-start-6">
             <h2 className="ts-m">Recognition</h2>
             <div className="c-list ts-m">
+              {/* Awwwards 奖项 */}
               <div className="c-list-section md:grid grid-cols-16 gap-x-24 gap-y-12">
                 <div className="c-list-section-title">Awwwards</div>
                 <div className="c-list-items">
@@ -72,6 +79,7 @@ export function AboutView() {
                 </div>
               </div>
 
+              {/* Webby Awards 奖项 */}
               <div className="c-list-section md:grid grid-cols-16 gap-x-24 gap-y-12">
                 <div className="c-list-section-title">Webby Awards</div>
                 <div className="c-list-items">
@@ -86,6 +94,7 @@ export function AboutView() {
                 </div>
               </div>
 
+              {/* Behance 奖项 */}
               <div className="c-list-section md:grid grid-cols-16 gap-x-24 gap-y-12">
                 <div className="c-list-section-title">Behance</div>
                 <div className="c-list-items">

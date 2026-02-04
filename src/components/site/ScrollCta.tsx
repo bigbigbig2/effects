@@ -1,8 +1,12 @@
 type ScrollCtaProps = {
-  align?: "left" | "right";
+  align?: "left" | "right"; // 对齐方式
 };
 
+// ScrollCta 组件：
+// "Scroll Down" 提示组件。
+// 指示用户向下滚动查看更多内容。
 export function ScrollCta({ align = "left" }: ScrollCtaProps) {
+  // 根据对齐方式计算 grid 列的类名
   const columnClass =
     align === "right"
       ? "lg:col-start-14 lg:col-span-10 xl:col-span-8 xl:col-start-14"
@@ -14,6 +18,7 @@ export function ScrollCta({ align = "left" }: ScrollCtaProps) {
         <div className="lg:grid grid-cols-24 gap-24">
           <div className={columnClass}>
             <div className="c-scroll-cta-inner">
+              {/* 向下箭头图标 */}
               <div className="c-scroll-cta-icon">
                 <svg
                   className="c-icon-arrow-xs"
@@ -44,6 +49,7 @@ export function ScrollCta({ align = "left" }: ScrollCtaProps) {
                   />
                 </svg>
               </div>
+              {/* 提示文本 */}
               <div className="c-scroll-cta-text ts-m">Scroll Down</div>
             </div>
           </div>
