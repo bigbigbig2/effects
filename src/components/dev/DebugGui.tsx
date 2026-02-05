@@ -76,6 +76,14 @@ export function DebugGui() {
       render
         .add(settings.render, "toneMappingExposure", 0.1, 2.5, 0.05)
         .onChange((value: number) => setSettings({ render: { toneMappingExposure: value } }));
+      render
+        .add(settings.render, "outputColorSpace", ["SRGB", "Linear"])
+        .onChange((value: "SRGB" | "Linear") =>
+          setSettings({ render: { outputColorSpace: value } })
+        );
+      render
+        .add(settings.render, "debugBloom")
+        .onChange((value: boolean) => setSettings({ render: { debugBloom: value } }));
 
       const composite = gui.addFolder("Composite");
       composite

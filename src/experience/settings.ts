@@ -20,6 +20,8 @@ export type ExperienceSettings = {
     luminositySmoothing: number;
     toneMapping: "ACES" | "Filmic" | "Reinhard" | "None";
     toneMappingExposure: number;
+    outputColorSpace: "SRGB" | "Linear";
+    debugBloom: boolean;
   };
   composite: {
     contrast: number;
@@ -75,6 +77,8 @@ const defaultSettings: ExperienceSettings = {
     luminositySmoothing: 0.95,
     toneMapping: "ACES",
     toneMappingExposure: 1,
+    outputColorSpace: "SRGB",
+    debugBloom: false,
   },
   composite: {
     contrast: 1.1,

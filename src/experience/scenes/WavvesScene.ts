@@ -14,8 +14,6 @@ precision highp float;
 
 ${VIGNETTE}
 
-#include <tonemapping_pars_fragment>
-
 uniform sampler2D tScene;
 uniform float uTime;
 uniform float uRatio;
@@ -50,7 +48,6 @@ void main() {
   // 应用晕影遮罩
   FragColor.rgb *= 1. - vignetteF;
 
-  #include <tonemapping_fragment>
 }
 `;
 

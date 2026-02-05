@@ -39,7 +39,7 @@ export class WorkScene {
   private rotationAdjustment = 0;
   private rotationOffsetComputed = false;
 
-  private ambientLight: THREE.AmbientLight;
+  private ambientLight: THREE.AmbientLight | undefined;
   private spotLight: THREE.SpotLight | null = null;
   private directionalLight: THREE.DirectionalLight | null = null;
   private directionalLight2: THREE.DirectionalLight | null = null;

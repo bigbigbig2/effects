@@ -24,8 +24,6 @@ precision highp float;
 ${BLEND_MULTIPLY}
 ${SATURATION}
 
-#include <tonemapping_pars_fragment>
-
 uniform sampler2D tScene;
 uniform float uDarkenIntensity;
 uniform vec3 uDarkenColor;
@@ -42,7 +40,6 @@ void main() {
   mixed.rgb = saturation(mixed.rgb, uSaturation);
   FragColor = vec4(mixed.rgb, 1.0);
 
-  #include <tonemapping_fragment>
 }
 `;
 
@@ -131,4 +128,3 @@ export class WorkThumbRenderManager {
     renderer.setRenderTarget(null);
   }
 }
-

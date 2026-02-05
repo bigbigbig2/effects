@@ -58,8 +58,6 @@ vec3 blend(int mode, vec3 base, vec3 blend, float opacity) {
 const COMPOSITE_FRAGMENT = `
 precision highp float;
 
-#include <tonemapping_pars_fragment>
-
 ${SATURATION}
 ${VIGNETTE}
 ${RGBSHIFT}
@@ -112,7 +110,6 @@ void main() {
 
   FragColor = vec4(mixed.rgb, 1.);
 
-  #include <tonemapping_fragment>
 }
 `;
 
