@@ -18,10 +18,6 @@ export type ExperienceSettings = {
     luminosityEnabled: boolean;
     luminosityThreshold: number;
     luminositySmoothing: number;
-    toneMapping: "ACES" | "Filmic" | "Reinhard" | "None";
-    toneMappingExposure: number;
-    outputColorSpace: "SRGB" | "Linear";
-    debugBloom: boolean;
   };
   composite: {
     contrast: number;
@@ -46,12 +42,29 @@ export type ExperienceSettings = {
     groundEnvIntensity: number;
     groundY: number;
     groundScale: number;
-    envTint: string;
+    envDarken: number;
+    envShader1Alpha: number;
+    envShader1Speed: number;
+    envShader1Scale: number;
+    envShader2Alpha: number;
+    envShader2Scale: number;
+    envShader3Alpha: number;
+    envShader3Speed: number;
+    envShader3Scale: number;
+    envShader1Mix3: number;
     mouseFactor: number;
     mouseLightness: number;
     mouseThickness: number;
     mousePersistance: number;
     mousePressure: number;
+  };
+  sky: {
+    shader1Alpha: number;
+    shader1Speed: number;
+    shader1Scale: number;
+    shader2Speed: number;
+    shader2Scale: number;
+    shaderMix: number;
   };
 };
 
@@ -75,10 +88,6 @@ const defaultSettings: ExperienceSettings = {
     luminosityEnabled: true,
     luminosityThreshold: 0.1,
     luminositySmoothing: 0.95,
-    toneMapping: "ACES",
-    toneMappingExposure: 1,
-    outputColorSpace: "SRGB",
-    debugBloom: false,
   },
   composite: {
     contrast: 1.1,
@@ -89,12 +98,12 @@ const defaultSettings: ExperienceSettings = {
   },
   work: {
     onlyActiveVisible: false,
-    ambientIntensity: -2,
+    ambientIntensity: 0.5,
     spotIntensity: 220,
     fogEnabled: true,
     fogColor: "#A294FF",
-    fogNear: 0.0,
-    fogFar: 376,
+    fogNear: 17.39,
+    fogFar: 35.87,
     groundEnabled: true,
     groundColor: "#4a4a4a",
     groundRoughness: 0.93,
@@ -103,12 +112,29 @@ const defaultSettings: ExperienceSettings = {
     groundEnvIntensity: 0.97,
     groundY: -1.65,
     groundScale: 1,
-    envTint: "#ffffff",
+    envDarken: 1,
+    envShader1Alpha: 0.5,
+    envShader1Speed: 0.5,
+    envShader1Scale: 5.5,
+    envShader2Alpha: 0,
+    envShader2Scale: 13,
+    envShader3Alpha: 0,
+    envShader3Speed: 0,
+    envShader3Scale: 0,
+    envShader1Mix3: 1.5,
     mouseFactor: 0.25,
     mouseLightness: 1,
     mouseThickness: 0.1,
     mousePersistance: 0.85,
     mousePressure: 0,
+  },
+  sky: {
+    shader1Alpha: 0.5,
+    shader1Speed: 0.5,
+    shader1Scale: 5.5,
+    shader2Speed: 0,
+    shader2Scale: 0,
+    shaderMix: 1.5,
   },
 };
 
@@ -117,6 +143,7 @@ const settings: ExperienceSettings = {
   render: { ...defaultSettings.render },
   composite: { ...defaultSettings.composite },
   work: { ...defaultSettings.work },
+  sky: { ...defaultSettings.sky },
 };
 
 type Listener = (value: ExperienceSettings) => void;
@@ -126,6 +153,7 @@ type PartialSettings = {
   render?: Partial<ExperienceSettings["render"]>;
   composite?: Partial<ExperienceSettings["composite"]>;
   work?: Partial<ExperienceSettings["work"]>;
+  sky?: Partial<ExperienceSettings["sky"]>;
 };
 
 const listeners = new Set<Listener>();
@@ -147,6 +175,9 @@ export function setSettings(partial: PartialSettings) {
   if (partial.work) {
     Object.assign(settings.work, partial.work);
   }
+  if (partial.sky) {
+    Object.assign(settings.sky, partial.sky);
+  }
   listeners.forEach((listener) => listener(settings));
 }
 
@@ -156,6 +187,7 @@ export function resetSettings() {
     render: { ...defaultSettings.render },
     composite: { ...defaultSettings.composite },
     work: { ...defaultSettings.work },
+    sky: { ...defaultSettings.sky },
   });
 }
 

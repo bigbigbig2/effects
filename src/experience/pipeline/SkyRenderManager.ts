@@ -202,6 +202,8 @@ ${BLEND_NEGATION}
 ${BLEND_COLOR_BURN}
 ${OIL}
 
+#include <tonemapping_pars_fragment>
+
 uniform sampler2D tScene;
 uniform float uTime;
 uniform float uShader1Speed;
@@ -231,6 +233,7 @@ void main() {
 
   FragColor = vec4(.9 - diffuseColor.rgb, 1.);
 
+  #include <tonemapping_fragment>
 }
 `;
 

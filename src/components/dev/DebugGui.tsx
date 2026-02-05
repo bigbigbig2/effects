@@ -68,22 +68,6 @@ export function DebugGui() {
       render
         .add(settings.render, "luminositySmoothing", 0, 1, 0.01)
         .onChange((value: number) => setSettings({ render: { luminositySmoothing: value } }));
-      render
-        .add(settings.render, "toneMapping", ["ACES", "Filmic", "Reinhard", "None"])
-        .onChange((value: "ACES" | "Filmic" | "Reinhard" | "None") =>
-          setSettings({ render: { toneMapping: value } })
-        );
-      render
-        .add(settings.render, "toneMappingExposure", 0.1, 2.5, 0.05)
-        .onChange((value: number) => setSettings({ render: { toneMappingExposure: value } }));
-      render
-        .add(settings.render, "outputColorSpace", ["SRGB", "Linear"])
-        .onChange((value: "SRGB" | "Linear") =>
-          setSettings({ render: { outputColorSpace: value } })
-        );
-      render
-        .add(settings.render, "debugBloom")
-        .onChange((value: boolean) => setSettings({ render: { debugBloom: value } }));
 
       const composite = gui.addFolder("Composite");
       composite
@@ -149,8 +133,35 @@ export function DebugGui() {
         .add(settings.work, "groundScale", 0.2, 3, 0.01)
         .onChange((value: number) => setSettings({ work: { groundScale: value } }));
       work
-        .addColor(settings.work, "envTint")
-        .onChange((value: string) => setSettings({ work: { envTint: value } }));
+        .add(settings.work, "envDarken", 0, 2, 0.01)
+        .onChange((value: number) => setSettings({ work: { envDarken: value } }));
+      work
+        .add(settings.work, "envShader1Alpha", 0, 1, 0.01)
+        .onChange((value: number) => setSettings({ work: { envShader1Alpha: value } }));
+      work
+        .add(settings.work, "envShader1Speed", 0, 2, 0.01)
+        .onChange((value: number) => setSettings({ work: { envShader1Speed: value } }));
+      work
+        .add(settings.work, "envShader1Scale", 0, 20, 0.1)
+        .onChange((value: number) => setSettings({ work: { envShader1Scale: value } }));
+      work
+        .add(settings.work, "envShader2Alpha", 0, 1, 0.01)
+        .onChange((value: number) => setSettings({ work: { envShader2Alpha: value } }));
+      work
+        .add(settings.work, "envShader2Scale", 0, 40, 0.1)
+        .onChange((value: number) => setSettings({ work: { envShader2Scale: value } }));
+      work
+        .add(settings.work, "envShader3Alpha", 0, 1, 0.01)
+        .onChange((value: number) => setSettings({ work: { envShader3Alpha: value } }));
+      work
+        .add(settings.work, "envShader3Speed", 0, 2, 0.01)
+        .onChange((value: number) => setSettings({ work: { envShader3Speed: value } }));
+      work
+        .add(settings.work, "envShader3Scale", 0, 40, 0.1)
+        .onChange((value: number) => setSettings({ work: { envShader3Scale: value } }));
+      work
+        .add(settings.work, "envShader1Mix3", 0, 3, 0.01)
+        .onChange((value: number) => setSettings({ work: { envShader1Mix3: value } }));
       work
         .add(settings.work, "mouseFactor", 0, 1, 0.01)
         .onChange((value: number) => setSettings({ work: { mouseFactor: value } }));
@@ -166,6 +177,26 @@ export function DebugGui() {
       work
         .add(settings.work, "mousePressure", 0, 1, 0.01)
         .onChange((value: number) => setSettings({ work: { mousePressure: value } }));
+
+      const sky = gui.addFolder("Sky");
+      sky
+        .add(settings.sky, "shader1Alpha", 0, 1, 0.01)
+        .onChange((value: number) => setSettings({ sky: { shader1Alpha: value } }));
+      sky
+        .add(settings.sky, "shader1Speed", 0, 2, 0.01)
+        .onChange((value: number) => setSettings({ sky: { shader1Speed: value } }));
+      sky
+        .add(settings.sky, "shader1Scale", 0, 20, 0.1)
+        .onChange((value: number) => setSettings({ sky: { shader1Scale: value } }));
+      sky
+        .add(settings.sky, "shader2Speed", 0, 2, 0.01)
+        .onChange((value: number) => setSettings({ sky: { shader2Speed: value } }));
+      sky
+        .add(settings.sky, "shader2Scale", 0, 20, 0.1)
+        .onChange((value: number) => setSettings({ sky: { shader2Scale: value } }));
+      sky
+        .add(settings.sky, "shaderMix", 0, 3, 0.01)
+        .onChange((value: number) => setSettings({ sky: { shaderMix: value } }));
 
       gui.add({ reset: () => resetSettings() }, "reset");
     };

@@ -260,7 +260,7 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         uContainerSize: { value: new THREE.Vector2() },
         uDisplacement: { value: 0.1 },
         uPerlin: { value: 0.1 },
-        uBgColor: { value: new THREE.Color("#1F1F1F").convertSRGBToLinear() },
+        uBgColor: { value: new THREE.Color("#1F1F1F").convertLinearToSRGB() },
         uReveal: { value: 0 },
         uMediaReveal: { value: 0 },
         uContrast: { value: 1.1 },

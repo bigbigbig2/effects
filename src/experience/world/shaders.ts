@@ -1037,7 +1037,6 @@ uniform float uShader1Mix3;
 
 uniform vec3 uDarkenColor;
 uniform float uDarken;
-uniform vec3 uEnvTint;
 
 uniform sampler2D tSky;
 
@@ -1198,7 +1197,6 @@ void main() {
 	#include <opaque_fragment>
 
   gl_FragColor.rgb = blend(4, gl_FragColor.rgb, uDarkenColor, uDarken);
-  gl_FragColor.rgb *= uEnvTint;
   // gl_FragColor.rgb = 1. - noiseMixed.rgb;
   // gl_FragColor.rgb = vec3(mask4);
 

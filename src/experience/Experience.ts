@@ -188,7 +188,7 @@ export class Experience {
     const settings = getSettings();
     const primary = project.colors?.primary ?? "#bcbcbc";
     const secondary = project.colors?.secondary ?? "#464646";
-    const ambientIntensity = settings.work.ambientIntensity ?? project.ambient;
+    const ambientIntensity = project.ambient ?? settings.work.ambientIntensity;
     const ambientColor =
       ambientIntensity < 0 && project.colors?.invert ? project.colors.invert : secondary;
     const darken = project.darkenOverview ?? settings.render.darken;

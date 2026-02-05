@@ -11,7 +11,6 @@ import { WavvesScene } from "../scenes/WavvesScene";
 import { SkyScene } from "../scenes/SkyScene";
 import { WorkThumbScene } from "../scenes/WorkThumbScene";
 import { MainComposite } from "./MainComposite";
-import { PostProcessor } from "./PostProcessor";
 
 type PipelineUpdate = {
   time: number;
@@ -44,7 +43,6 @@ export class RenderPipeline {
   readonly wavvesScene: WavvesScene;
   readonly workThumbScene: WorkThumbScene;
   readonly mainComposite: MainComposite;
-  readonly post: PostProcessor;
   readonly skyScene: SkyScene;
 
   private assets: Assets;
@@ -56,7 +54,6 @@ export class RenderPipeline {
     this.assets = assets;
     this.projects = projects;
 
-    this.post = new PostProcessor(this.renderer.instance);
     this.skyScene = new SkyScene(this.renderer.instance);
 
     this.workScene = new WorkScene(this.renderer.instance, projects, {
@@ -136,7 +133,6 @@ export class RenderPipeline {
     this.wavvesScene.resize(width, height, pixelRatio);
     this.workThumbScene.resize(width, height, 1);
     this.mainComposite.resize(width, height, pixelRatio);
-    this.post.resize(width, height);
   }
 
   setActiveIndex(index: number, mediaEnabled: boolean) {
@@ -154,7 +150,7 @@ export class RenderPipeline {
     this.workThumbScene.setThumbSettings(payload.thumb);
     this.mainComposite.material.uniforms.uBgColor.value
       .set(payload.compositeBg)
-      .convertSRGBToLinear();
+      .convertLinearToSRGB();
   }
 
   update({ time, delta, dpr, input, tween, size, settings, mediaEnabled }: PipelineUpdate) {
@@ -176,42 +172,42 @@ export class RenderPipeline {
 
     const mouseTexture =
       this.workScene.renderManager.mouseSimulation?.bufferSim.output.texture ?? null;
+    const bloomTexture = this.workScene.renderManager.settings.bloom.enabled
+      ? this.workScene.renderManager.renderTargetsHorizontal[0].texture
+      : null;
 
     this.mainComposite.render({
       time,
       work: this.workScene.texture,
       media: mediaEnabled ? this.mediaScene.texture : null,
       mouse: mouseTexture,
-      bloom: null,
+      bloom: bloomTexture,
       fluid: this.wavvesScene.texture,
       ratio: size.width / size.height,
       fluidStrength: settings.composite.fluidStrength,
     });
-
-    this.post.render(this.mainComposite.texture);
+    this.renderer.render(this.mainComposite.scene, this.mainComposite.camera);
   }
 
   private applySettings(settings: ExperienceSettings) {
     const render = settings.render;
-    this.post.setToneMapping(render.toneMapping, render.toneMappingExposure);
-    this.post.setOutputColorSpace(render.outputColorSpace);
-    this.post.setBloom({
-      enabled: render.bloomEnabled,
-      strength: render.bloomStrength,
-      radius: render.bloomRadius,
-      threshold: render.luminosityThreshold,
-      smoothing: render.luminositySmoothing,
-      luminanceEnabled: render.luminosityEnabled,
-      debug: render.debugBloom,
-    });
 
     const compositeUniforms = this.workScene.renderManager.compositeMaterial.uniforms;
     compositeUniforms.uDarken.value = render.darken;
     compositeUniforms.uSaturation.value = render.saturation;
 
     const rmSettings = this.workScene.renderManager.settings;
-    rmSettings.bloom.enabled = false;
-    rmSettings.luminosity.enabled = false;
+    rmSettings.bloom.enabled = render.bloomEnabled;
+    rmSettings.bloom.strength = render.bloomStrength;
+    rmSettings.bloom.radius = render.bloomRadius;
+    rmSettings.luminosity.enabled = render.luminosityEnabled;
+    rmSettings.luminosity.threshold = render.luminosityThreshold;
+    rmSettings.luminosity.smoothing = render.luminositySmoothing;
+    this.workScene.renderManager.luminosityMaterial.uniforms.uThreshold.value =
+      render.luminosityThreshold;
+    this.workScene.renderManager.luminosityMaterial.uniforms.uSmoothing.value =
+      render.luminositySmoothing;
+    this.workScene.renderManager.updateBloom();
 
     this.workScene.setVisibilityMode(settings.work.onlyActiveVisible);
     this.workScene.setLightIntensity(settings.work.ambientIntensity, settings.work.spotIntensity);
@@ -231,7 +227,18 @@ export class RenderPipeline {
       y: settings.work.groundY,
       scale: settings.work.groundScale,
     });
-    this.workScene.setEnvironmentTint(settings.work.envTint);
+    this.workScene.setEnvironmentShaderSettings({
+      darken: settings.work.envDarken,
+      shader1Alpha: settings.work.envShader1Alpha,
+      shader1Speed: settings.work.envShader1Speed,
+      shader1Scale: settings.work.envShader1Scale,
+      shader2Alpha: settings.work.envShader2Alpha,
+      shader2Scale: settings.work.envShader2Scale,
+      shader3Alpha: settings.work.envShader3Alpha,
+      shader3Speed: settings.work.envShader3Speed,
+      shader3Scale: settings.work.envShader3Scale,
+      shader1Mix3: settings.work.envShader1Mix3,
+    });
     this.workScene.setMouseSettings({
       factor: settings.work.mouseFactor,
       lightness: settings.work.mouseLightness,
@@ -245,10 +252,17 @@ export class RenderPipeline {
     mainUniforms.uPerlin.value = settings.composite.perlin;
     mainUniforms.uFluidStrength.value = settings.composite.fluidStrength;
     mainUniforms.uMediaReveal.value = settings.composite.mediaReveal;
-    mainUniforms.uBgColor.value.set(settings.composite.bgColor).convertSRGBToLinear();
+    mainUniforms.uBgColor.value.set(settings.composite.bgColor).convertLinearToSRGB();
+
+    const skyUniforms = this.skyScene.renderManager.compositeMaterial.uniforms;
+    skyUniforms.uShader1Alpha.value = settings.sky.shader1Alpha;
+    skyUniforms.uShader1Speed.value = settings.sky.shader1Speed;
+    skyUniforms.uShader1Scale.value = settings.sky.shader1Scale;
+    skyUniforms.uShader2Speed.value = settings.sky.shader2Speed;
+    skyUniforms.uShader2Scale.value = settings.sky.shader2Scale;
+    skyUniforms.uShaderMix.value = settings.sky.shaderMix;
   }
 
   destroy() {
-    this.post.destroy();
   }
 }

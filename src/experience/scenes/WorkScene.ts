@@ -225,7 +225,7 @@ export class WorkScene {
     const tone = new THREE.Color(color).convertLinearToSRGB();
     this.ambientLight.color.copy(tone);
     this.ambientLight.intensity = intensity;
-    this.env?.setDarkenColor(`#${tone.getHexString()}`);
+    this.env?.setDarkenColor(this.ambientLight.color);
   }
 
   setBlocksColor(color: string) {
@@ -235,8 +235,19 @@ export class WorkScene {
     });
   }
 
-  setEnvironmentTint(color: string) {
-    this.env?.setEnvTint(color);
+  setEnvironmentShaderSettings(settings: {
+    darken: number;
+    shader1Alpha: number;
+    shader1Speed: number;
+    shader1Scale: number;
+    shader2Alpha: number;
+    shader2Scale: number;
+    shader3Alpha: number;
+    shader3Speed: number;
+    shader3Scale: number;
+    shader1Mix3: number;
+  }) {
+    this.env?.setShaderSettings(settings);
   }
 
   setDarken(value: number) {

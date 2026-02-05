@@ -27,7 +27,6 @@ class WorkEnvironmentMaterial extends THREE.MeshStandardMaterial {
       uDarken: new THREE.Uniform(1),
       tSky: new THREE.Uniform(null),
       uDarkenColor: new THREE.Uniform(new THREE.Color("#464646")),
-      uEnvTint: new THREE.Uniform(new THREE.Color("#ffffff")),
       uShader1Alpha: new THREE.Uniform(ENV_SETTINGS.SHADER_1_ALPHA),
       uShader1Speed: new THREE.Uniform(ENV_SETTINGS.SHADER_1_SPEED),
       uShader1Scale: new THREE.Uniform(ENV_SETTINGS.SHADER_1_SCALE),
@@ -54,7 +53,6 @@ class WorkEnvironmentMaterial extends THREE.MeshStandardMaterial {
       shader.uniforms.uDarken = this.customUniforms.uDarken;
       shader.uniforms.uTime = this.customUniforms.uTime;
       shader.uniforms.tSky = this.customUniforms.tSky;
-      shader.uniforms.uEnvTint = this.customUniforms.uEnvTint;
 
       shader.vertexShader = ENV_VERTEX;
       shader.fragmentShader = ENV_FRAGMENT;
@@ -82,16 +80,40 @@ export class WorkEnvironment extends THREE.Group {
     this.material.customUniforms.tSky.value = texture;
   }
 
-  setDarkenColor(color: string) {
-    this.material.customUniforms.uDarkenColor.value = new THREE.Color(color);
+  setDarkenColor(color: string | THREE.Color) {
+    if (color instanceof THREE.Color) {
+      this.material.customUniforms.uDarkenColor.value.copy(color);
+    } else {
+      this.material.customUniforms.uDarkenColor.value = new THREE.Color(color);
+    }
   }
 
   setDarken(value: number) {
     this.material.customUniforms.uDarken.value = value;
   }
 
-  setEnvTint(color: string) {
-    this.material.customUniforms.uEnvTint.value = new THREE.Color(color);
+  setShaderSettings(settings: {
+    darken: number;
+    shader1Alpha: number;
+    shader1Speed: number;
+    shader1Scale: number;
+    shader2Alpha: number;
+    shader2Scale: number;
+    shader3Alpha: number;
+    shader3Speed: number;
+    shader3Scale: number;
+    shader1Mix3: number;
+  }) {
+    this.material.customUniforms.uDarken.value = settings.darken;
+    this.material.customUniforms.uShader1Alpha.value = settings.shader1Alpha;
+    this.material.customUniforms.uShader1Speed.value = settings.shader1Speed;
+    this.material.customUniforms.uShader1Scale.value = settings.shader1Scale;
+    this.material.customUniforms.uShader2Alpha.value = settings.shader2Alpha;
+    this.material.customUniforms.uShader2Scale.value = settings.shader2Scale;
+    this.material.customUniforms.uShader3Alpha.value = settings.shader3Alpha;
+    this.material.customUniforms.uShader3Speed.value = settings.shader3Speed;
+    this.material.customUniforms.uShader3Scale.value = settings.shader3Scale;
+    this.material.customUniforms.uShader1Mix3.value = settings.shader1Mix3;
   }
 
   update(time: number) {
