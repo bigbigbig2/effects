@@ -1,4 +1,4 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import {
   BlendFunction,
   BloomEffect,
@@ -32,7 +32,7 @@ export class PostProcessor {
     this.frameBufferType = this.resolveFrameBufferType(renderer);
 
     this.screenScene = new THREE.Scene();
-    // 屏幕空间后处理：这里用正交相机渲染全屏纹纹理?    
+    this.screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.screenMaterial = new THREE.MeshBasicMaterial({
       map: null,
       toneMapped: false,
