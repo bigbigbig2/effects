@@ -1,4 +1,4 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import type { Assets } from "../core/Assets";
 import type { ProjectItem } from "../data/projects";
 import { WorkThumbRenderManager } from "../pipeline/WorkThumbRenderManager";
@@ -107,6 +107,8 @@ class ThumbItem {
   }
 }
 
+// ThumbGallery:
+// 管理缩略图列表的滚动排布。
 class ThumbGallery extends THREE.Group {
   readonly thumbs: ThumbItem[] = [];
   readonly scrollWrap: THREE.Group;
@@ -156,6 +158,13 @@ class ThumbGallery extends THREE.Group {
   }
 }
 
+/**
+ * WorkThumbScene
+ *
+ * 作用：生成离屏缩略图纹理，用作 SpotLight.map 的投影纹理。
+ * - 使用正交相机渲染缩略图阵列
+ * - 通过 WorkThumbRenderManager 做暗化/饱和处理
+ */
 export class WorkThumbScene {
   readonly scene: THREE.Scene;
   readonly camera: THREE.OrthographicCamera;
@@ -189,11 +198,13 @@ export class WorkThumbScene {
     }
   }
 
+  // 每帧更新缩略图位置并渲染离屏纹理
   update(progress: number) {
     this.thumbs.updateGalleryProgress(progress);
     this.renderManager.update(this.camera, this.scene);
   }
 
+  // 设置投影纹理的暗化/饱和度
   setThumbSettings(options: { darkness: number; darknessColor: string; saturation: number }) {
     const uniforms = this.renderManager.compositeMaterial.uniforms;
     uniforms.uDarkenIntensity.value = options.darkness;
@@ -206,6 +217,7 @@ export class WorkThumbScene {
     this.thumbs.calcItemWidth();
   }
 
+  // 输出给 SpotLight.map 的纹理
   get texture() {
     return this.renderManager.renderTargetComposite.texture;
   }

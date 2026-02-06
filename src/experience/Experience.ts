@@ -9,10 +9,9 @@ import { Soundscape } from "./audio/Soundscape";
 import { projects } from "./data/projects";
 import { getSettings, setSettings } from "./settings";
 
-// 体验初始化的配置选项
 export type ExperienceOptions = {
-  canvas: HTMLCanvasElement; // 渲染的目标 Canvas
-  container: HTMLElement;    // Canvas 的父容器，用于监听尺寸变化
+  canvas: HTMLCanvasElement;
+  container: HTMLElement;
 };
 
 // UI 选择事件的详情
@@ -26,9 +25,6 @@ type UiActiveDetail = {
   progress: number;
 };
 
-// Experience 类：
-// 整个 3D 体验的核心控制器（God Class）。
-// 负责初始化各个子系统（渲染器、场景、资源、输入等），并管理主循环。
 export class Experience {
   private renderer: Renderer;
   private time: Time;
@@ -64,14 +60,11 @@ export class Experience {
     this.pipeline.setActiveIndex(0);
     this.applyProjectTheme(0);
 
-    // 6. 绑定全局事件监听
     window.addEventListener("resize", this.onResize);
     window.addEventListener("ui:select", this.onSelect as EventListener);
 
-    // 7. 启动时间循环（每一帧调用 update）
     this.time = new Time((delta, elapsed) => this.update(delta, elapsed));
 
-    // 8. 初始调整尺寸
     this.resize();
   }
 

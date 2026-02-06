@@ -1,5 +1,14 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 
+/**
+ * Reflector
+ *
+ * 地面反射渲染器：
+ * - 通过“镜像相机”渲染场景到离屏纹理
+ * - 支持简单模糊迭代，软化反射
+ */
+
+// 全屏模糊（用于反射软化）
 const BLUR_VERTEX = `
 out vec2 vUv;
 void main() {
@@ -46,6 +55,7 @@ void main() {
 }
 `;
 
+// 反射模糊材质
 class BlurMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -64,6 +74,7 @@ class BlurMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// 全屏三角形（比全屏四边形更省顶点）
 const createScreenTriangle = () => {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
@@ -81,6 +92,7 @@ export class Reflector extends THREE.Group {
   readonly clipBias: number;
   readonly blurIterations: number;
 
+  // 反射平面与中间计算缓存
   private reflectorPlane = new THREE.Plane();
   private normal = new THREE.Vector3();
   private reflectorWorldPosition = new THREE.Vector3();
@@ -121,11 +133,13 @@ export class Reflector extends THREE.Group {
     this.clipBias = clipBias;
     this.blurIterations = blurIterations;
 
+    // 离屏渲染目标（反射纹理）
     this.renderTarget = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false });
     this.renderTargetRead = this.renderTarget.clone();
     this.renderTargetWrite = this.renderTarget.clone();
     this.renderTarget.depthBuffer = true;
 
+    // 输出纹理供地面材质采样
     this.renderTargetUniform = new THREE.Uniform(
       this.blurIterations > 0 ? this.renderTargetRead.texture : this.renderTarget.texture
     );
@@ -134,6 +148,7 @@ export class Reflector extends THREE.Group {
     this.screen.frustumCulled = false;
   }
 
+  // Resize：反射纹理尺寸
   setSize(width: number, height: number, dpr: number) {
     const w = width * 0.75;
     const h = height * 0.75;
@@ -143,6 +158,7 @@ export class Reflector extends THREE.Group {
     this.blurMaterial.uniforms.uResolution.value.set(width * dpr, height * dpr);
   }
 
+  // 每帧更新反射纹理
   update(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
     this.reflectorWorldPosition.setFromMatrixPosition(this.matrixWorld);
     this.cameraWorldPosition.setFromMatrixPosition(camera.matrixWorld);
@@ -150,6 +166,7 @@ export class Reflector extends THREE.Group {
     this.normal.set(0, 0, 1).applyMatrix4(this.rotationMatrix);
     this.view.subVectors(this.reflectorWorldPosition, this.cameraWorldPosition);
 
+    // 背面不渲染反射
     if (this.view.dot(this.normal) > 0) return;
 
     this.view.reflect(this.normal).negate();
@@ -197,10 +214,12 @@ export class Reflector extends THREE.Group {
     projectionMatrix.elements[10] = this.clipPlane.z + 1 - this.clipBias;
     projectionMatrix.elements[14] = this.clipPlane.w;
 
+    // 保存当前渲染状态
     const currentRenderTarget = renderer.getRenderTarget();
     const currentXrEnabled = renderer.xr.enabled;
     const currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
 
+    // 关闭 XR/阴影自动更新，避免污染主渲染
     renderer.xr.enabled = false;
     renderer.shadowMap.autoUpdate = false;
     renderer.setRenderTarget(this.renderTarget);
@@ -208,6 +227,7 @@ export class Reflector extends THREE.Group {
     if (renderer.autoClear === false) renderer.clear();
     renderer.render(scene, this.virtualCamera);
 
+    // 反射模糊迭代
     const blurIterations = this.blurIterations;
     for (let i = 0; i < blurIterations; i += 1) {
       if (i === 0) {
@@ -225,11 +245,13 @@ export class Reflector extends THREE.Group {
       this.renderTargetUniform.value = this.renderTargetRead.texture;
     }
 
+    // 恢复渲染状态
     renderer.xr.enabled = currentXrEnabled;
     renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
     renderer.setRenderTarget(currentRenderTarget);
   }
 
+  // 释放 GPU 资源
   destroy() {
     this.renderTargetWrite.dispose();
     this.renderTargetRead.dispose();

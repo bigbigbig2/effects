@@ -1,3 +1,10 @@
+﻿/**
+ * shaders.ts
+ *
+ * 集中管理 Work / Floor / Environment 的自定义 Shader。
+ * 仅包含 GLSL 字符串，不包含运行时代码。
+ */
+// WorkScreen 顶点着色器（实例化 + 鼠标扰动）
 export const WORK_VERTEX = `
 
 attribute float instanceIndex;
@@ -162,6 +169,8 @@ void main() {
 }
 `;
 
+// WorkScreen 鐗囨鐫€鑹插櫒锛堥鑹?鍏夌収/閫忔槑搴?榧犳爣褰卞搷锛?// WorkScreen 片段着色器（颜色/光照/透明度/鼠标影响）
+// WorkScreen 片段着色器（颜色/光照/透明度/鼠标影响）
 export const WORK_FRAGMENT = `
 
 varying float vInstanceIndex;
@@ -340,6 +349,9 @@ void main() {
 }
 `;
 
+// 鍦伴潰椤剁偣鐫€鑹插櫒
+// 地面顶点着色器
+// 地面顶点着色器
 export const FLOOR_VERTEX = `
 
 uniform mat3 uMapTransform;
@@ -360,6 +372,8 @@ void main() {
 
 `;
 
+// 鍦伴潰鐗囨鐫€鑹插櫒锛堝弽灏勩€佺矖绯欏害銆佹硶绾挎壈鍔ㄣ€侀浘锛?// 地面片段着色器（反射、粗糙度、法线扰动、雾）
+// 地面片段着色器（反射、粗糙度、法线扰动、雾）
 export const FLOOR_FRAGMENT = `
 
 precision mediump float;
@@ -469,6 +483,9 @@ void main() {
 }
 `;
 
+// 鐜椤剁偣鐫€鑹插櫒
+// 环境顶点着色器
+// 环境顶点着色器
 export const ENV_VERTEX = `
 
 varying vec2 vUv;
@@ -516,6 +533,9 @@ void main() {
 }
 `;
 
+// 鐜鐗囨鐫€鑹插櫒锛堝櫔澹板眰銆佹殫鍖栥€佹贩鍚堬級
+// 环境片段着色器（噪声层、暗化、混合）
+// 环境片段着色器（噪声层、暗化、混合）
 export const ENV_FRAGMENT = `
 
 

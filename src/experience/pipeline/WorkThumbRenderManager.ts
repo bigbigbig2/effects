@@ -1,5 +1,14 @@
 import * as THREE from "three";
 
+/**
+ * WorkThumbRenderManager
+ *
+ * 作用：
+ * - 将缩略图场景渲染到离屏纹理
+ * - 进行暗化 / 饱和处理
+ * - 输出给 SpotLight.map 作为投影纹理
+ */
+
 const SATURATION = `
 vec3 saturation(vec3 rgb, float adjustment) {
     const vec3 W = vec3(0.2125, 0.7154, 0.0721);
@@ -18,6 +27,7 @@ vec3 blendMultiply(vec3 base, vec3 blend, float opacity) {
 }
 `;
 
+// 缩略图后处理：暗化 + 饱和度
 const COMPOSITE_FRAGMENT = `
 precision highp float;
 
@@ -51,6 +61,7 @@ void main() {
 }
 `;
 
+// 缩略图合成材质
 class ThumbCompositeMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -102,6 +113,7 @@ export class WorkThumbRenderManager {
     this.screen = new THREE.Mesh(this.screenGeometry, this.compositeMaterial);
     this.screen.frustumCulled = false;
 
+    // 主离屏与合成离屏
     this.renderTargetA = new THREE.WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
@@ -109,12 +121,14 @@ export class WorkThumbRenderManager {
     this.renderTargetComposite = this.renderTargetA.clone();
   }
 
+  // 缩略图统一按最短边分辨率渲染，保证投影清晰度
   resize(width: number, height: number, dpr: number) {
     const size = Math.round(Math.min(width, height) * dpr);
     this.renderTargetA.setSize(size, size);
     this.renderTargetComposite.setSize(size, size);
   }
 
+  // 每帧更新：先渲场景，再用合成材质处理
   update(camera: THREE.Camera = this.camera, scene: THREE.Scene = this.scene) {
     const renderer = this.renderer;
     renderer.setRenderTarget(this.renderTargetA);

@@ -1,19 +1,24 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 
+// 网格屏幕参数
+// - width/height/depth: 网格在 X/Y/Z 维度的数量
+// - cubeSize: 单个立方体尺寸
+// - material: 统一材质（通常是投影材质）
 type CubeGridOptions = {
-  width?: number; // 网格宽度（列数）
-  height?: number; // 网格高度（行数）
-  depth?: number; // 网格深度（层数）
-  cubeSize?: number; // 单个立方体的大小
-  material: THREE.Material; // 材质
+  width?: number;
+  height?: number;
+  depth?: number;
+  cubeSize?: number;
+  material: THREE.Material;
 };
 
 /**
- * 立方体网格屏幕 (CubeGridScreen)
+ * CubeGridScreen
  *
- * 创建一个由许多小立方体组成的网格屏幕。
- * 使用 InstancedMesh 优化性能，所有立方体共享同一个几何体和材质。
- * 每个立方体都有自己的 UV 坐标，使得整个网格可以像屏幕一样显示一张完整的图片。
+ * 用 InstancedMesh 生成“立方体屏幕”网格：
+ * - 每个立方体共享同一套几何体与材质
+ * - 使用实例属性保存 UV 与 Alpha
+ * - 可将一张图像映射成“方块屏幕”的整体视觉
  */
 export class CubeGridScreen {
   readonly mesh: THREE.InstancedMesh;
@@ -34,11 +39,11 @@ export class CubeGridScreen {
 
     // 生成网格布局
     for (let y = 0; y < height; y += 1) {
-      // 每一行的透明度随机，产生一点噪点效果
+      // 每行的透明度略带随机，增加颗粒感
       const rowAlpha = 0.35 + Math.random() * 0.65;
       for (let x = 0; x < width; x += 1) {
         for (let z = 0; z < depth; z += 1) {
-          // 计算每个立方体的位置，使其居中
+          // 计算每个立方体的位置并居中
           const offsetX = x * cubeSize - totalWidth * 0.5;
           const offsetY = y * cubeSize - totalHeight * 0.5;
           const offsetZ = (z - (depth - 1) * 0.5) * cubeSize;
@@ -47,14 +52,14 @@ export class CubeGridScreen {
           dummy.updateMatrix();
           this.mesh.setMatrixAt(index, dummy.matrix);
 
-          // 计算 UV 坐标，映射到 0-1 范围
+          // 实例 UV（映射到 0-1）
           const u = width === 1 ? 0.5 : x / (width - 1);
           const v = height === 1 ? 0.5 : y / (height - 1);
 
           uvs[index * 2] = u;
           uvs[index * 2 + 1] = v;
 
-          // 设置单个立方体的透明度
+          // 每个立方体的透明度
           const cubeRand = Math.random();
           alphas[index] = rowAlpha * (0.5 + 0.5 * cubeRand);
 
@@ -63,7 +68,7 @@ export class CubeGridScreen {
       }
     }
 
-    // 将 UV 和 Alpha 作为实例属性传递给 Shader
+    // 将 UV / Alpha 作为实例属性传入 Shader
     geometry.setAttribute("aUv", new THREE.InstancedBufferAttribute(uvs, 2));
     geometry.setAttribute("aAlpha", new THREE.InstancedBufferAttribute(alphas, 1));
 

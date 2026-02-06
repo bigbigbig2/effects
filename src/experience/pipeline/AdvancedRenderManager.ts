@@ -2,6 +2,20 @@ import * as THREE from "three";
 import { MouseSim } from "../core/MouseSim";
 import { lerp } from "../utils/math";
 
+/**
+ * AdvancedRenderManager
+ *
+ * 作用：
+ * - 统一管理 “场景 -> 离屏 -> 后处理 -> 输出” 的渲染管线
+ * - 内置 Bloom / Luminosity / Blur / FXAA / MouseSim 等通用步骤
+ *
+ * 设计要点：
+ * - 通过可配置 settings 控制每个 pass 是否启用
+ * - 采用屏幕四边形（screen quad）进行后处理
+ * - 使用多级 RenderTarget 管理中间结果
+ */
+
+// 抖动：用于 Bloom 合成时减少色带
 const DITHER_RANDOM = `
 float random(vec2 co) {
     float a = 12.9898;
@@ -24,6 +38,7 @@ vec3 dither(vec3 color) {
 }
 `;
 
+// Bloom 合成：将多级模糊结果按权重相加
 const BLOOM_FRAGMENT = `
 precision mediump float;
 
@@ -57,6 +72,7 @@ void main() {
 }
 `;
 
+// FXAA：全屏抗锯齿
 const FXAA_FRAGMENT = `
 precision mediump float;
 uniform sampler2D tMap;
@@ -133,6 +149,7 @@ void main() {
 }
 `;
 
+// 亮度提取：为 Bloom 准备高亮区域
 const LUMINOSITY_FRAGMENT = `
 precision mediump float;
 uniform sampler2D tMap;
@@ -157,6 +174,7 @@ void main() {
 }
 `;
 
+// 分离高斯模糊：横/纵向两次采样
 const SEPARABLE_BLUR_FRAGMENT = `
 precision mediump float;
 uniform sampler2D tMap;
@@ -197,6 +215,7 @@ void main() {
 }
 `;
 
+// 简化模糊：用于轻量化 blur pass
 const SIMPLE_BLUR_FRAGMENT = `
 precision highp float;
 
@@ -235,6 +254,7 @@ void main() {
 }
 `;
 
+// FXAA 材质
 class FxaaMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -252,6 +272,7 @@ class FxaaMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// Luminosity 材质
 class LuminosityMaterial extends THREE.ShaderMaterial {
   constructor() {
     super({
@@ -270,6 +291,7 @@ class LuminosityMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// 分离模糊材质（多级 Bloom）
 class SeparableBlurMaterial extends THREE.ShaderMaterial {
   constructor(kernelRadius: number) {
     super({
@@ -295,6 +317,7 @@ class SeparableBlurMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// 简易模糊材质（可选 blur）
 class SimpleBlurMaterial extends THREE.ShaderMaterial {
   constructor(direction = new THREE.Vector2(0.5, 0.5)) {
     super({
@@ -314,6 +337,7 @@ class SimpleBlurMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// Bloom 合成材质
 class BloomMaterial extends THREE.ShaderMaterial {
   constructor({ dithering = false } = {}) {
     super({
@@ -339,6 +363,7 @@ class BloomMaterial extends THREE.ShaderMaterial {
   }
 }
 
+// 渲染设置：控制各个 pass 是否启用及其参数
 type RenderSettings = {
   renderToScreen: boolean;
   fxaa: { enabled: boolean };
@@ -349,6 +374,7 @@ type RenderSettings = {
   fluid: { enabled: boolean };
 };
 
+// 每帧更新所需的参数
 type UpdateOptions = {
   time: number;
   delta: number;
@@ -362,19 +388,22 @@ export class AdvancedRenderManager {
   readonly scene: THREE.Scene;
   readonly camera: THREE.Camera;
 
+  // 全屏四边形：用于后处理渲染
   readonly screenCamera: THREE.OrthographicCamera;
   readonly screenGeometry: THREE.BufferGeometry;
   readonly screen: THREE.Mesh;
 
-  readonly renderTargetA: THREE.WebGLRenderTarget;
-  readonly renderTargetComposite: THREE.WebGLRenderTarget;
-  readonly renderTargetBright: THREE.WebGLRenderTarget;
-  readonly renderTargetBlurA: THREE.WebGLRenderTarget;
-  readonly renderTargetBlurB: THREE.WebGLRenderTarget;
-  readonly renderTargetsHorizontal: THREE.WebGLRenderTarget[];
-  readonly renderTargetsVertical: THREE.WebGLRenderTarget[];
-  readonly renderTargetFXAA: THREE.WebGLRenderTarget;
+  // 主要离屏缓冲与中间结果
+  readonly renderTargetA: THREE.WebGLRenderTarget; // 主场景渲染输出
+  readonly renderTargetComposite: THREE.WebGLRenderTarget; // 合成结果
+  readonly renderTargetBright: THREE.WebGLRenderTarget; // 亮部提取
+  readonly renderTargetBlurA: THREE.WebGLRenderTarget; // Blur 横向
+  readonly renderTargetBlurB: THREE.WebGLRenderTarget; // Blur 纵向
+  readonly renderTargetsHorizontal: THREE.WebGLRenderTarget[]; // Bloom 横向 mips
+  readonly renderTargetsVertical: THREE.WebGLRenderTarget[]; // Bloom 纵向 mips
+  readonly renderTargetFXAA: THREE.WebGLRenderTarget; // FXAA 输出
 
+  // 各类后处理材质
   readonly hBlurMaterial: SimpleBlurMaterial;
   readonly vBlurMaterial: SimpleBlurMaterial;
   readonly fxaaMaterial: FxaaMaterial;
@@ -403,6 +432,7 @@ export class AdvancedRenderManager {
 
     this.settings = this.initSettings();
 
+    // 全屏四边形相机与几何体
     this.screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.screenGeometry = new THREE.BufferGeometry();
     this.screenGeometry.setAttribute(
@@ -416,12 +446,15 @@ export class AdvancedRenderManager {
     this.screen = new THREE.Mesh(this.screenGeometry, this.compositeMaterial);
     this.screen.frustumCulled = false;
 
+    // 主渲染目标：作为所有后处理的输入
     this.renderTargetA = new THREE.WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
     });
+    // 深度纹理：可用于基于深度的效果
     this.renderTargetA.depthTexture = new THREE.DepthTexture(1, 1);
     this.renderTargetA.depthTexture.type = THREE.UnsignedShortType;
+    // 复用配置并复制出各类中间 RT
     this.renderTargetComposite = this.renderTargetA.clone();
     this.renderTargetBright = this.renderTargetA.clone();
     this.renderTargetBlurA = this.renderTargetA.clone();
@@ -434,6 +467,7 @@ export class AdvancedRenderManager {
     }
     this.renderTargetFXAA = this.renderTargetA.clone();
 
+    // Blur / FXAA / Luminosity
     this.hBlurMaterial = new SimpleBlurMaterial(new THREE.Vector2(1, 0));
     this.vBlurMaterial = new SimpleBlurMaterial(new THREE.Vector2(0, 1));
     this.fxaaMaterial = new FxaaMaterial();
@@ -441,6 +475,7 @@ export class AdvancedRenderManager {
     this.luminosityMaterial.uniforms.uThreshold.value = this.settings.luminosity.threshold;
     this.luminosityMaterial.uniforms.uSmoothing.value = this.settings.luminosity.smoothing;
 
+    // Bloom 多级模糊材质
     this.blurMaterials = [];
     const kernels = [3, 5, 7, 9, 11];
     for (let i = 0; i < this.nMips; i += 1) {
@@ -455,6 +490,7 @@ export class AdvancedRenderManager {
     this.bloomMaterial.uniforms.tBlur5.value = this.renderTargetsVertical[4].texture;
     this.bloomMaterial.uniforms.uBloomFactors.value = this.bloomFactors();
 
+    // 可选启用全局 MouseSim
     if (this.settings.mousesim.enabled) {
       this.initMouseSim();
     }
@@ -462,6 +498,7 @@ export class AdvancedRenderManager {
     this.renderTargetA.depthBuffer = true;
   }
 
+  // 子类可覆写：设置初始渲染参数
   initSettings(): RenderSettings {
     return {
       renderToScreen: false,
@@ -474,6 +511,7 @@ export class AdvancedRenderManager {
     };
   }
 
+  // 初始化全局 MouseSim（非 WorkScreen 内部的局部 MouseSim）
   private initMouseSim() {
     this.mouseSimulation = new MouseSim({
       renderer: this.renderer,
@@ -481,6 +519,7 @@ export class AdvancedRenderManager {
     });
   }
 
+  // 计算 Bloom 权重（受 strength 与 radius 影响）
   protected bloomFactors() {
     const factors = [1, 0.8, 0.6, 0.4, 0.2];
     for (let i = 0; i < this.nMips; i += 1) {
@@ -490,10 +529,12 @@ export class AdvancedRenderManager {
     return factors;
   }
 
+  // 重新计算 Bloom 权重并写入材质
   updateBloom() {
     this.bloomMaterial.uniforms.uBloomFactors.value = this.bloomFactors();
   }
 
+  // 调整所有 RT 尺寸
   resize(width: number, height: number, dpr: number) {
     if (this.settings.renderToScreen) {
       this.renderer.setPixelRatio(dpr);
@@ -544,10 +585,12 @@ export class AdvancedRenderManager {
     }
   }
 
+  // Bloom 使用的尺寸取整
   private floorPowerOfTwo(value: number) {
     return Math.pow(2, Math.floor(Math.log(value) / Math.LN2));
   }
 
+  // 每帧更新：按配置执行各个 pass，并最终输出
   update({ time, delta, pointer, camera, scene }: UpdateOptions) {
     const renderer = this.renderer;
     const activeCamera = camera ?? this.camera;
@@ -556,10 +599,12 @@ export class AdvancedRenderManager {
     const targetBright = this.renderTargetBright;
     const targetComposite = this.renderTargetComposite;
 
+    // 1. 渲染主场景到 targetA
     renderer.setRenderTarget(targetA);
     renderer.render(activeScene, activeCamera);
 
     let blurOutput: THREE.Texture | null = null;
+    // 2. 可选 Blur
     if (this.settings.blur.enabled) {
       this.hBlurMaterial.uniforms.tMap.value = targetA.texture;
       this.screen.material = this.hBlurMaterial;
@@ -573,6 +618,7 @@ export class AdvancedRenderManager {
       blurOutput = this.renderTargetBlurB.texture;
     }
 
+    // 3. 可选亮度提取
     if (this.settings.luminosity.enabled) {
       this.luminosityMaterial.uniforms.tMap.value = blurOutput ?? targetA.texture;
       this.screen.material = this.luminosityMaterial;
@@ -580,6 +626,7 @@ export class AdvancedRenderManager {
       renderer.render(this.screen, this.screenCamera);
     }
 
+    // 4. Bloom mip chain
     if (this.settings.bloom.enabled) {
       let input = this.settings.luminosity.enabled ? targetBright : targetA;
       for (let i = 0; i < this.nMips; i += 1) {
@@ -602,12 +649,14 @@ export class AdvancedRenderManager {
         this.renderTargetsHorizontal[0].texture;
     }
 
+    // 5. 全局 MouseSim
     if (this.settings.mousesim.enabled && this.mouseSimulation && pointer) {
       this.mouseSimulation.update(time, delta, pointer);
       this.compositeMaterial.uniforms.tMouseSim.value =
         this.mouseSimulation.bufferSim.output.texture;
     }
 
+    // 6. 合成 Pass：将主场景与 Bloom / MouseSim 等输入合并
     this.compositeMaterial.uniforms.tScene.value = blurOutput ?? targetA.texture;
     this.compositeMaterial.uniforms.boolBloom.value = this.settings.bloom.enabled;
     this.compositeMaterial.uniforms.boolFluid.value = this.settings.fluid.enabled;
@@ -615,6 +664,7 @@ export class AdvancedRenderManager {
     this.compositeMaterial.uniforms.boolFxaa.value = this.settings.fxaa.enabled;
 
     this.screen.material = this.compositeMaterial;
+    // 7. 可选 FXAA
     if (this.settings.fxaa.enabled) {
       renderer.setRenderTarget(this.renderTargetFXAA);
       renderer.render(this.screen, this.screenCamera);
@@ -622,6 +672,7 @@ export class AdvancedRenderManager {
       this.screen.material = this.fxaaMaterial;
     }
 
+    // 8. 输出到屏幕或写入 renderTargetComposite
     if (this.settings.renderToScreen) {
       renderer.setRenderTarget(null);
       renderer.render(this.screen, this.screenCamera);

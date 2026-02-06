@@ -1,6 +1,7 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import { AdvancedRenderManager } from "./AdvancedRenderManager";
 
+// 色彩调整相关函数
 const SATURATION = `
 vec3 saturation(vec3 rgb, float adjustment) {
     const vec3 W = vec3(0.2125, 0.7154, 0.0721);
@@ -9,6 +10,7 @@ vec3 saturation(vec3 rgb, float adjustment) {
 }
 `;
 
+// 暗角效果函数
 const VIGNETTE = `
 float vignette(vec2 coords, float vignin, float vignout, float vignfade, float fstop) {
   float dist = distance(coords.xy, vec2(0.5, 0.5));
@@ -17,6 +19,7 @@ float vignette(vec2 coords, float vignin, float vignout, float vignfade, float f
 }
 `;
 
+// RGB 通道偏移函数
 const RGBSHIFT = `
 vec4 rgbshift(sampler2D image, vec2 uv, float angle, float amount) {
     vec2 offset = vec2(cos(angle), sin(angle)) * amount;
@@ -27,6 +30,7 @@ vec4 rgbshift(sampler2D image, vec2 uv, float angle, float amount) {
 }
 `;
 
+// 多种混合模式函数
 const BLEND = `
 vec3 blendAdd(vec3 base, vec3 blend, float opacity) {
   vec3 mixed = min(base + blend, vec3(1.0));
@@ -56,11 +60,12 @@ vec3 blend(int mode, vec3 base, vec3 blend, float opacity) {
 `;
 
 /**
- * WorkScene ºÏ³É Shader
+ * WorkScene 合成 Shader
  *
- * ÏÖÔÚ Work Ö±½Ó×÷Îª×îÖÕÊä³ö£º
- * - »ù´¡ºÏ³É + ¿ÉÑ¡ Bloom
- * - ¿ÉÑ¡°µ»¯ / ±¥ºÍ¶È
+ * 当前架构：Work 直接输出为最终画面
+ * - 合成主场景 (tScene)
+ * - 可选叠加 Bloom
+ * - 可选暗化 / 饱和度
  */
 const COMPOSITE_FRAGMENT = `
 precision highp float;
@@ -82,15 +87,12 @@ out vec4 FragColor;
 
 void main() {
   vec2 uv = vUv;
-  
-  // åºç¡åºæ¯éæ ·ï¼è½»å¾?RGB åç§»ï¼?
+
   vec4 mixed = rgbshift(tScene, uv, -1., .0015);
-  
-  // æ·»å æµä½ææçè½»å¾®å½±å?
+
   vec4 fluid = texture(tFluid, vUv);
   mixed.rgb += length(fluid.xy) * .015;
 
-  // ¿ÉÑ¡ Bloom
   if (boolBloom) {
     vec4 bloom = rgbshift(tBloom, uv, -1.5, .02);
     float angle = length(uv + 0.5);
@@ -99,7 +101,6 @@ void main() {
     mixed.rgb += rgbshift(tBloom, uv, angle, amount / .5).rgb * 0.5;
   }
 
-  // Çá¶È°µ»¯ / ±¥ºÍ¶Èµ÷Õû
   mixed.rgb = mix(mixed.rgb, vec3(0.0), uDarken);
   mixed.rgb = saturation(mixed.rgb, uSaturation);
 
@@ -143,6 +144,12 @@ class WorkCompositeMaterial extends THREE.ShaderMaterial {
   }
 }
 
+/**
+ * WorkRenderManager
+ *
+ * 继承 AdvancedRenderManager，复用其离屏管线。
+ * 不同点：提供 Work 专用的合成 Shader（WorkCompositeMaterial）。
+ */
 export class WorkRenderManager extends AdvancedRenderManager {
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -150,7 +157,10 @@ export class WorkRenderManager extends AdvancedRenderManager {
     camera: THREE.Camera,
     noiseTexture: THREE.Texture | null
   ) {
+    // 传入 Work 专用合成材质
     super(renderer, scene, camera, new WorkCompositeMaterial(), noiseTexture);
+
+    // 初始化占位纹理，避免未绑定时采样报错
     const black = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
     black.needsUpdate = true;
     this.compositeMaterial.uniforms.tFluid.value = black;
@@ -158,6 +168,7 @@ export class WorkRenderManager extends AdvancedRenderManager {
     this.compositeMaterial.uniforms.tBloom.value = black;
   }
 
+  // 初始化默认后处理配置（Work 直接输出）
   override initSettings() {
     return {
       renderToScreen: true,
@@ -170,5 +181,3 @@ export class WorkRenderManager extends AdvancedRenderManager {
     };
   }
 }
-
-

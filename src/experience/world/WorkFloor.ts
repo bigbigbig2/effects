@@ -1,7 +1,16 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import { FLOOR_FRAGMENT, FLOOR_VERTEX } from "./shaders";
 import { Reflector } from "./Reflector";
 
+/**
+ * WorkFloor
+ *
+ * 地面与反射：
+ * - 使用自定义 Shader 实现反射 + 法线扰动
+ * - 内部包含 Reflector（离屏渲染）
+ */
+
+// 地面材质：组合反射 / 法线 / 粗糙度 / 金属度
 class FloorMaterial extends THREE.ShaderMaterial {
   constructor({
     color = new THREE.Color(0x101010),
@@ -80,6 +89,7 @@ class FloorMaterial extends THREE.ShaderMaterial {
     });
   }
 
+  // 动态开关雾
   setFog(fog: THREE.Fog | null) {
     if (!fog) {
       if (this.defines && this.defines.USE_FOG !== undefined) {
@@ -130,6 +140,7 @@ export class WorkFloor extends THREE.Group {
     this.camera = camera;
     this.reflector = new Reflector();
 
+    // 地面几何体（圆形）
     const geometry = new THREE.CircleGeometry(60, 32);
     this.material = new FloorMaterial({
       color: "#4a4a4a",
@@ -146,6 +157,8 @@ export class WorkFloor extends THREE.Group {
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.rotation.x = -Math.PI / 2;
     this.mesh.add(this.reflector);
+
+    // 在渲染地面前先更新反射纹理
     this.mesh.onBeforeRender = () => {
       this.visible = false;
       this.reflector.update(this.renderer, this.scene, this.camera);
@@ -154,6 +167,7 @@ export class WorkFloor extends THREE.Group {
     this.add(this.mesh);
   }
 
+  // 设置法线纹理
   setNormalMap(texture: THREE.Texture | null) {
     if (!texture) return;
     texture.updateMatrix();
@@ -164,6 +178,7 @@ export class WorkFloor extends THREE.Group {
     this.material.needsUpdate = true;
   }
 
+  // 颜色 / 反射 / 粗糙度 / 金属度控制
   setColor(color: string) {
     this.material.uniforms.uColor.value = new THREE.Color(color);
   }
@@ -192,6 +207,7 @@ export class WorkFloor extends THREE.Group {
     this.material.setFog(fog);
   }
 
+  // Resize 反射 RT
   resize(width: number, height: number, dpr: number) {
     this.reflector.setSize(width, height, dpr);
   }

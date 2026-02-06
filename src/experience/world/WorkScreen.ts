@@ -1,34 +1,24 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { MouseSim } from "../core/MouseSim";
 import { damp } from "../utils/math";
 import { WorkInstancedMaterial } from "./WorkInstancedMaterial";
 
-type WorkScreenOptions = {
-  renderer: THREE.WebGLRenderer;
-  camera: THREE.Camera;
-  perlinTexture: THREE.Texture | null;
-  noiseTexture: THREE.Texture | null;
-};
-
 /**
- * 工作区屏幕 (WorkScreen)
+ * WorkScreen
  *
- * 这是 3D 场景中的核心视觉组件，通常表现为一个由许多小方块组成的"云"或"墙"。
- * 它使用 InstancedMesh 渲染大量 RoundedBoxGeometry，并结合自定义 Shader 实现复杂的动画效果。
- *
- * 主要功能：
- * - 生成 3D 粒子网格
- * - 集成鼠标交互 (MouseSim)
- * - 射线检测平面 (RayPlane) 用于精确的鼠标拾取
+ * 每个项目对应一个“立方体屏幕”：
+ * - InstancedMesh + 自定义材质
+ * - 内部集成 MouseSim，用于生成局部交互纹理
+ * - 提供 RayCast 平面用于鼠标交互
  */
 export class WorkScreen extends THREE.Group {
   readonly settings = {
-    xNum: 35, // X轴方块数量
-    yNum: 23, // Y轴方块数量
-    zNum: 7,  // Z轴方块数量
-    size: 1.25, // 方块大小
-    spacing: 0.1, // 方块间距
+    xNum: 35, // X 方向数量
+    yNum: 23, // Y 方向数量
+    zNum: 7,  // Z 方向数量
+    size: 1.25, // 单个立方体尺寸
+    spacing: 0.1, // 间距
     scale: 0.09, // 整体缩放
   };
 
@@ -43,7 +33,12 @@ export class WorkScreen extends THREE.Group {
   readonly mouseSim: MouseSim;
   private mouseSpeed = 0;
 
-  constructor(options: WorkScreenOptions) {
+  constructor(options: {
+    renderer: THREE.WebGLRenderer;
+    camera: THREE.Camera;
+    perlinTexture: THREE.Texture | null;
+    noiseTexture: THREE.Texture | null;
+  }) {
     super();
 
     const { renderer, camera, perlinTexture, noiseTexture } = options;
@@ -64,9 +59,8 @@ export class WorkScreen extends THREE.Group {
     );
 
     // 计算实例总数
-    this.instanceCount =
-      this.settings.xNum * this.settings.yNum * this.settings.zNum;
-    
+    this.instanceCount = this.settings.xNum * this.settings.yNum * this.settings.zNum;
+
     // 创建 InstancedMesh
     this.mesh = new THREE.InstancedMesh(
       this.geometry,
@@ -134,7 +128,7 @@ export class WorkScreen extends THREE.Group {
     this.planeMaterial.depthTest = false;
     this.planeMaterial.depthWrite = false;
 
-    // 射线检测平面材质
+    // 射线检测平面
     const rayPlaneMaterial = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0,
@@ -177,6 +171,7 @@ export class WorkScreen extends THREE.Group {
     });
   }
 
+  // 为每个实例生成 UV / Alpha / Index
   private createInstancedAttributes() {
     const indices = new Float32Array(this.instanceCount);
     const colors = new Float32Array(this.instanceCount * 3);
@@ -204,6 +199,7 @@ export class WorkScreen extends THREE.Group {
     );
   }
 
+  // 将实例摆成 3D 网格阵列
   private positionInstancedMesh() {
     const dummy = new THREE.Object3D();
     let index = 0;
@@ -239,11 +235,13 @@ export class WorkScreen extends THREE.Group {
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
+  // Resize：MouseSim 分辨率按平面尺寸
   resize(width: number, height: number) {
     // Match original: mouse sim resolution follows the plane scale, not viewport size.
     this.mouseSim.onResize(this.plane.scale.x, this.plane.scale.y);
   }
 
+  // 每帧更新：材质、鼠标模拟、位移纹理
   update(
     time: number,
     delta: number,
@@ -266,6 +264,7 @@ export class WorkScreen extends THREE.Group {
     this.material.customUniforms.tDisplacement.value = displacementTexture;
   }
 
+  // 外部调整鼠标模拟参数
   setMouseSimConfig(config: { persistance?: number; thickness?: number; pressure?: number }) {
     this.mouseSim.setConfig(config);
   }

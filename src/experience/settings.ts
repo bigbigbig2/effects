@@ -66,7 +66,7 @@ const defaultSettings: ExperienceSettings = {
   },
   render: {
     darken: 0.2,
-    saturation: 0.35,
+    saturation: 0.96,
     bloomEnabled: true,
     bloomStrength: 0.15,
     bloomRadius: 1.5,
@@ -77,7 +77,7 @@ const defaultSettings: ExperienceSettings = {
   work: {
     onlyActiveVisible: false,
     ambientIntensity: -1,
-    spotIntensity: 220,
+    spotIntensity: 300,
     fogEnabled: false,
     fogColor: "#A294FF",
     fogNear: 17.39,
@@ -90,7 +90,7 @@ const defaultSettings: ExperienceSettings = {
     groundEnvIntensity: 0.97,
     groundY: -1.65,
     groundScale: 1.5,
-    envDarken: 1,
+    envDarken: 0.15,
     envShader1Alpha: 0.5,
     envShader1Speed: 0.5,
     envShader1Scale: 5.5,

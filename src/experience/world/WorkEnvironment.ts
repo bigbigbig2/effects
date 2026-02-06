@@ -1,6 +1,15 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import { ENV_FRAGMENT, ENV_VERTEX } from "./shaders";
 
+/**
+ * WorkEnvironment
+ *
+ * 场景背景环境：
+ * - 使用圆柱体包裹场景（背面渲染）
+ * - 自定义 Shader 驱动噪声与层次
+ */
+
+// 默认环境参数
 const ENV_SETTINGS = {
   ENVMAP_INTENSITY: 1,
   SHADER_1_ALPHA: 0.5,
@@ -14,6 +23,7 @@ const ENV_SETTINGS = {
   SHADER_1_MIX_3: 1.5,
 };
 
+// 环境材质：在 MeshStandardMaterial 基础上注入自定义 Shader
 class WorkEnvironmentMaterial extends THREE.MeshStandardMaterial {
   readonly customUniforms: Record<string, THREE.IUniform>;
 
@@ -59,6 +69,7 @@ class WorkEnvironmentMaterial extends THREE.MeshStandardMaterial {
     };
   }
 
+  // 每帧更新：驱动时间相关动画
   update(time: number) {
     this.customUniforms.uTime.value = time;
   }
@@ -70,16 +81,19 @@ export class WorkEnvironment extends THREE.Group {
 
   constructor() {
     super();
+    // 圆柱体包裹，背面渲染
     const geometry = new THREE.CylinderGeometry(300, 300, 10, 64, 1, true);
     this.material = new WorkEnvironmentMaterial();
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.add(this.mesh);
   }
 
+  // 注入 Sky 噪声纹理
   setSkyTexture(texture: THREE.Texture | null) {
     this.material.customUniforms.tSky.value = texture;
   }
 
+  // 设置环境暗化色
   setDarkenColor(color: string | THREE.Color) {
     if (color instanceof THREE.Color) {
       this.material.customUniforms.uDarkenColor.value.copy(color);
@@ -88,10 +102,12 @@ export class WorkEnvironment extends THREE.Group {
     }
   }
 
+  // 环境暗化强度
   setDarken(value: number) {
     this.material.customUniforms.uDarken.value = value;
   }
 
+  // 批量设置环境 Shader 参数
   setShaderSettings(settings: {
     darken: number;
     shader1Alpha: number;
@@ -116,6 +132,7 @@ export class WorkEnvironment extends THREE.Group {
     this.material.customUniforms.uShader1Mix3.value = settings.shader1Mix3;
   }
 
+  // 每帧更新时间
   update(time: number) {
     this.material.update(time);
   }

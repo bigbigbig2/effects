@@ -1,4 +1,4 @@
-import * as THREE from "three";
+﻿import * as THREE from "three";
 import type { Input } from "../core/Input";
 import type { Camera } from "../core/Camera";
 import type { ScrollDriver } from "../motion/ScrollDriver";
@@ -24,19 +24,20 @@ type ScreenItem = {
 };
 
 /**
- * 屏幕环 (ScreenRing)
+ * ScreenRing
  *
- * 管理一组呈环形排列的 CubeGridScreen。
- * 随着用户的滚动，环会旋转，展示不同的项目。
- * 结合了视差效果和鼠标交互。
+ * 该类用于创建“环形投影屏幕”阵列（目前未在主流程使用）。
+ * - 每个屏幕由 CubeGridScreen 组成
+ * - 每个屏幕贴一张项目纹理
+ * - 环形布局 + 视差偏移
  */
 export class ScreenRing {
   private group = new THREE.Group();
   private screens: ScreenItem[] = [];
   private currentTheta = 0; // 当前旋转角度
   private targetTheta = 0; // 目标旋转角度
-  private radius = 5.5; // 环的半径
-  private parallaxScale = 0.03; // 视差强度
+  private radius = 5.5; // 环半径
+  private parallaxScale = 0.03; // 视差幅度
   private velocityScale = 0.00035; // 速度对视差的影响
   private tempPosition = new THREE.Vector3();
   private tempDirection = new THREE.Vector3();
@@ -52,7 +53,7 @@ export class ScreenRing {
       const material = new ProjectionMaterial();
       material.depthWrite = false;
 
-      // 创建由小立方体组成的屏幕
+      // 由立方体网格组成的屏幕
       const grid = new CubeGridScreen({
         width: 30,
         height: 18,
@@ -88,13 +89,12 @@ export class ScreenRing {
   private layoutScreens() {
     const count = this.screens.length;
     for (let i = 0; i < count; i += 1) {
-      // 计算每个屏幕在环上的角度位置
+      // 按环形摆放屏幕
       const angle = (i / count) * Math.PI * 2;
       const x = Math.cos(angle) * this.radius;
       const z = Math.sin(angle) * this.radius;
       const screen = this.screens[i];
       screen.group.position.set(x, 0, z);
-      // 让屏幕面向圆心
       screen.group.lookAt(0, 0, 0);
     }
   }
@@ -103,12 +103,12 @@ export class ScreenRing {
     const progress = tween.progress;
     const velocity = tween.velocity;
 
-    // 根据滚动进度更新旋转角度
+    // 根据滚动进度旋转环形阵列
     this.targetTheta = -progress * Math.PI * 2;
     this.currentTheta += (this.targetTheta - this.currentTheta) * Math.min(1, delta * 4);
     this.group.rotation.y = this.currentTheta;
 
-    // 计算视差偏移量
+    // 视差偏移
     const parallaxX = input.pointer.normX * this.parallaxScale + velocity * this.velocityScale;
     const parallaxY = -input.pointer.normY * this.parallaxScale;
 
@@ -117,6 +117,7 @@ export class ScreenRing {
     this.screens.forEach((screen) => {
       screen.material.uniforms.uParallax.value.set(parallaxX, parallaxY);
 
+      // 只显示正面朝向的屏幕
       screen.group.getWorldPosition(this.tempPosition);
       this.tempDirection.copy(this.tempPosition).sub(camera.instance.position).normalize();
       const dot = this.tempForward.dot(this.tempDirection);
