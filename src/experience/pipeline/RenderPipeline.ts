@@ -189,6 +189,7 @@ export class RenderPipeline {
     const bloomTexture = this.workScene.renderManager.settings.bloom.enabled
       ? this.workScene.renderManager.renderTargetsHorizontal[0].texture
       : null;
+    const depthTexture = this.workScene.renderManager.renderTargetA.depthTexture ?? null;
 
     this.mainComposite.render({
       time,
@@ -199,6 +200,9 @@ export class RenderPipeline {
       fluid: this.wavvesScene.texture,
       sky: this.skyScene.texture,
       thumb: this.workThumbScene.texture,
+      depth: depthTexture,
+      cameraNear: this.workScene.camera.near,
+      cameraFar: this.workScene.camera.far,
       ratio: size.width / size.height,
       fluidStrength: settings.composite.fluidStrength,
     });
@@ -229,8 +233,9 @@ export class RenderPipeline {
 
     this.workScene.setVisibilityMode(settings.work.onlyActiveVisible);
     this.workScene.setLightIntensity(settings.work.ambientIntensity, settings.work.spotIntensity);
+    // 使用合成雾时，关闭场景内置雾，避免地面过重的雾造成断层
     this.workScene.setFog(
-      settings.work.fogEnabled,
+      false,
       settings.work.fogColor,
       settings.work.fogNear,
       settings.work.fogFar
@@ -288,6 +293,14 @@ export class RenderPipeline {
     mainUniforms.uShowBloom.value = settings.layers.showBloom;
     mainUniforms.uShowFluid.value = settings.layers.showFluid;
     mainUniforms.uDebugView.value = DEBUG_VIEW_INDEX[settings.layers.debugView] ?? 0;
+    mainUniforms.uFogEnabled.value = settings.work.fogEnabled;
+    mainUniforms.uFogNear.value = settings.work.fogNear;
+    mainUniforms.uFogFar.value = settings.work.fogFar;
+    mainUniforms.uFogColor.value
+      .set(settings.work.fogColor)
+      .convertLinearToSRGB();
+    mainUniforms.uCameraNear.value = this.workScene.camera.near;
+    mainUniforms.uCameraFar.value = this.workScene.camera.far;
 
     const skyUniforms = this.skyScene.renderManager.compositeMaterial.uniforms;
     skyUniforms.uShader1Alpha.value = settings.sky.shader1Alpha;

@@ -147,6 +147,7 @@ uniform sampler2D tLensflare;
 uniform sampler2D tMedia;
 uniform sampler2D tSky;
 uniform sampler2D tThumb;
+uniform sampler2D tDepth;
 uniform float uMediaReveal;
 uniform float uFluidStrength;
 
@@ -184,6 +185,13 @@ uniform bool uShowBloom;
 uniform bool uShowFluid;
 uniform int uDebugView;
 
+uniform bool uFogEnabled;
+uniform float uFogNear;
+uniform float uFogFar;
+uniform vec3 uFogColor;
+uniform float uCameraNear;
+uniform float uCameraFar;
+
 in vec2 vUv;
 out vec4 FragColor;
 
@@ -192,7 +200,32 @@ float random(vec2 st)
     return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
 }
 
+float linearizeDepth(float depth, float near, float far) {
+  float z = depth * 2.0 - 1.0;
+  return (2.0 * near * far) / (far + near - z * (far - near));
+}
+
 void main() {
+  // 背景基底：天空纹理 + 微弱雾感 + 轻微光斑（更克制）
+  // 背景使用标准 0~1 UV，避免因宽高比缩放导致的重复平铺
+  vec2 bgUv = vUv;
+
+  vec2 skyUv = clamp(bgUv, 0.001, 0.999);
+  vec3 skyColor = texture(tSky, skyUv).rgb;
+
+  vec2 fogUv = clamp(bgUv * 0.6, 0.001, 0.999);
+  float fogNoise = texture(tPerlin, fogUv).r;
+  fogNoise = (fogNoise - 0.5) * 0.12;
+
+  float horizon = smoothstep(0.0, 0.75, 1.0 - bgUv.y);
+  float haze = clamp(horizon * 0.35 + fogNoise, 0.0, 1.0);
+  float glow = smoothstep(0.7, 0.15, distance(bgUv, vec2(0.8, 0.52)));
+
+  vec3 fogTint = mix(uBgColor, vec3(0.82, 0.9, 1.0), 0.35);
+  vec3 bgColor = mix(uBgColor, skyColor, 0.55);
+  bgColor = mix(bgColor, fogTint, haze);
+  bgColor += glow * 0.08;
+
   // Debug View: 直接输出指定层，绕过所有合成逻辑
   if (uDebugView != 0) {
     vec2 duv = vUv;
@@ -203,7 +236,7 @@ void main() {
     if (uDebugView == 5) { FragColor = vec4(texture(tFluid, duv).rgb, 1.); return; }
     if (uDebugView == 6) { FragColor = vec4(texture(tNoise, duv).rgb, 1.); return; }
     if (uDebugView == 7) { FragColor = vec4(texture(tPerlin, duv).rgb, 1.); return; }
-    if (uDebugView == 8) { FragColor = vec4(uBgColor, 1.); return; }
+    if (uDebugView == 8) { FragColor = vec4(bgColor, 1.); return; }
     if (uDebugView == 9) { FragColor = vec4(texture(tSky, duv).rgb, 1.); return; }
     if (uDebugView == 10) { FragColor = vec4(texture(tThumb, duv).rgb, 1.); return; }
   }
@@ -276,8 +309,8 @@ void main() {
   // 3.4 混合两种偏移效果（边缘使用强偏移，中心使用弱偏移）
   vec3 sceneMixed = mix(scene.rgb, sceneDisplaced.rgb, (1. - displacementVignette) * 1.);
   
-  // 3.5 将场景与背景色混合（如果 uShowWork 为 false，只显示背景色）
-  vec3 mixed = uShowWork ? mix(uBgColor, sceneMixed.rgb, 1.) : uBgColor;
+  // 3.5 将场景与背景混合（如果 uShowWork 为 false，只显示背景）
+  vec3 mixed = uShowWork ? mix(bgColor, sceneMixed.rgb, 1.) : bgColor;
 
   // ========================================
   // 步骤 4: 添加鼠标交互效果
@@ -351,7 +384,7 @@ void main() {
   
   // 8.4 与背景色混合（使用 Lighten 混合模式）
   // blend(11, ...) 是 blendLighten，取两者中较亮的值
-  mixed.rgb = blend(11, mixed.rgb, uBgColor.rgb, .85);
+  mixed.rgb = blend(11, mixed.rgb, bgColor, .2);
   
   // ========================================
   // 步骤 9: 混合媒体层（图片/视频）
@@ -368,26 +401,37 @@ void main() {
   }
   
   // ========================================
-  // 步骤 10: 添加胶片噪声（Film Grain）
+  // 步骤 10: 距离雾（基于深度纹理）
+  // ========================================
+  if (uFogEnabled) {
+    float depth = texture(tDepth, vUv).r;
+    float viewDepth = linearizeDepth(depth, uCameraNear, uCameraFar);
+    float fogFactor = smoothstep(uFogNear, uFogFar, viewDepth);
+    vec3 fogTarget = mix(uFogColor, bgColor, 0.6);
+    mixed.rgb = mix(mixed.rgb, fogTarget, clamp(fogFactor, 0.0, 1.0));
+  }
+
+  // ========================================
+  // 步骤 11: 添加胶片噪声（Film Grain）
   // ========================================
   // 目的：模拟胶片的颗粒感，增加复古质感
   
-  // 10.1 第一次混合：75% 保留原色，25% 应用噪声
+  // 11.1 第一次混合：75% 保留原色，25% 应用噪声
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, .75);
   
-  // 10.2 第二次混合：进一步减弱噪声效果
+  // 11.2 第二次混合：进一步减弱噪声效果
   // 注意：这里 1.5 > 1.0，所以实际上是完全保留原色（可能是为了微调）
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, 1.5);
  
   // ========================================
-  // 步骤 11: 应用曝光度
+  // 步骤 12: 应用曝光度
   // ========================================
   // 目的：整体调亮或调暗画面
   
   mixed.rgb *= uExposure;
  
   // ========================================
-  // 步骤 12: ACES 色调映射（HDR → LDR）
+  // 步骤 13: ACES 色调映射（HDR → LDR）
   // ========================================
   // 目的：将高动态范围映射到显示器可显示的范围
   // 特点：保留暗部细节，高光柔和过渡，电影感强
@@ -432,6 +476,7 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         tMedia: { value: null },
         tSky: { value: null },
         tThumb: { value: null },
+        tDepth: { value: null },
         tBloom: { value: null },
         tBlur: { value: null },
         tFluid: { value: null },
@@ -469,6 +514,12 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         uShowBloom: { value: true },
         uShowFluid: { value: true },
         uDebugView: { value: 0 },
+        uFogEnabled: { value: false },
+        uFogNear: { value: 1 },
+        uFogFar: { value: 50 },
+        uFogColor: { value: new THREE.Color("#1f1f1f").convertLinearToSRGB() },
+        uCameraNear: { value: 1 },
+        uCameraFar: { value: 2000 },
       },
       vertexShader: MAIN_VERTEX,
       fragmentShader: MAIN_FRAGMENT,
@@ -522,6 +573,7 @@ export class MainComposite {
     this.material.uniforms.tBloom.value = this.dummyTexture;
     this.material.uniforms.tSky.value = this.dummyTexture;
     this.material.uniforms.tThumb.value = this.dummyTexture;
+    this.material.uniforms.tDepth.value = this.dummyTexture;
     this.renderTarget = new THREE.WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
@@ -553,6 +605,9 @@ export class MainComposite {
     fluid?: THREE.Texture | null;
     sky?: THREE.Texture | null;
     thumb?: THREE.Texture | null;
+    depth?: THREE.Texture | null;
+    cameraNear?: number;
+    cameraFar?: number;
     ratio: number;
     fluidStrength?: number;
   }) {
@@ -567,6 +622,13 @@ export class MainComposite {
     this.material.uniforms.tFluid.value = fluid ?? this.dummyTexture;
     this.material.uniforms.tSky.value = sky ?? this.dummyTexture;
     this.material.uniforms.tThumb.value = thumb ?? this.dummyTexture;
+    this.material.uniforms.tDepth.value = options.depth ?? this.dummyTexture;
+    if (options.cameraNear !== undefined) {
+      this.material.uniforms.uCameraNear.value = options.cameraNear;
+    }
+    if (options.cameraFar !== undefined) {
+      this.material.uniforms.uCameraFar.value = options.cameraFar;
+    }
     this.material.uniforms.boolBloom.value = !!bloom;
     this.material.uniforms.boolFluid.value = !!fluid;
     this.material.uniforms.uFluidStrength.value = fluidStrength;

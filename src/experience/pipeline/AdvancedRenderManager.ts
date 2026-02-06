@@ -420,6 +420,8 @@ export class AdvancedRenderManager {
       depthBuffer: false,
       stencilBuffer: false,
     });
+    this.renderTargetA.depthTexture = new THREE.DepthTexture(1, 1);
+    this.renderTargetA.depthTexture.type = THREE.UnsignedShortType;
     this.renderTargetComposite = this.renderTargetA.clone();
     this.renderTargetBright = this.renderTargetA.clone();
     this.renderTargetBlurA = this.renderTargetA.clone();
@@ -515,6 +517,11 @@ export class AdvancedRenderManager {
     let w = Math.round(width * dpr);
     let h = Math.round(height * dpr);
     this.renderTargetA.setSize(w, h);
+    if (this.renderTargetA.depthTexture) {
+      this.renderTargetA.depthTexture.image.width = w;
+      this.renderTargetA.depthTexture.image.height = h;
+      this.renderTargetA.depthTexture.needsUpdate = true;
+    }
     this.renderTargetComposite.setSize(w, h);
 
     if (this.settings.mousesim.enabled && this.mouseSimulation) {
