@@ -1,6 +1,29 @@
 import * as THREE from "three";
 import type { Renderer } from "../core/Renderer";
 
+/**
+ * ACES Filmic 色调映射
+ * 
+ * 用途：将 HDR (高动态范围) 映射到 LDR (低动态范围)
+ * 
+ * 特点：
+ * - 保留暗部细节
+ * - 高光柔和过渡（不会突然变白）
+ * - 电影感强
+ * 
+ * 来源：ACES (Academy Color Encoding System)
+ */
+const ACES_TONEMAPPING = `
+vec3 ACESFilm(vec3 x) {
+  float a = 2.51;
+  float b = 0.03;
+  float c = 2.43;
+  float d = 0.59;
+  float e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+`;
+
 const SATURATION = `
 vec3 saturation(vec3 rgb, float adjustment) {
     const vec3 W = vec3(0.2125, 0.7154, 0.0721);
@@ -61,9 +84,38 @@ vec3 blend(int mode, vec3 base, vec3 blend, float opacity) {
 }
 `;
 
+/**
+ * MainComposite 片段着色器
+ * 
+ * 这是整个渲染管线的最后一步，负责将所有渲染层组合成最终画面。
+ * 
+ * 【渲染层输入】：
+ * - tWork: 主 3D 场景（WorkScene 渲染的结果）
+ * - tMedia: 媒体层（图片/视频）
+ * - tBloom: Bloom 发光效果
+ * - tMouseSim: 鼠标交互模拟纹理
+ * - tFluid: 流体扭曲纹理（WavvesScene）
+ * - tPerlin: Perlin 噪声纹理
+ * - tNoise: 蓝噪声纹理（用于胶片颗粒感）
+ * 
+ * 【组合流程】（12 个步骤）：
+ * 1. 准备动态 UV 坐标（Perlin 噪声动画）
+ * 2. 流体扭曲（基于 WavvesScene 的波纹）
+ * 3. 采样主场景 + RGB 色彩偏移（模拟色差）
+ * 4. 添加鼠标交互效果（发光轨迹）
+ * 5. 添加 Perlin 噪声（增加细节）
+ * 6. 添加 Bloom 发光（两次采样，增强效果）
+ * 7. 准备蓝噪声纹理
+ * 8. 统一后处理（暗化、对比度、饱和度）
+ * 9. 混合媒体层（图片/视频）
+ * 10. 添加胶片噪声（复古感）
+ * 11. 应用曝光度
+ * 12. ACES 色调映射（HDR → LDR）
+ */
 const MAIN_FRAGMENT = `
 precision highp float;
 
+${ACES_TONEMAPPING}
 ${SATURATION}
 ${VIGNETTE}
 ${CONTRAST}
@@ -93,6 +145,8 @@ uniform sampler2D tNoise;
 uniform sampler2D tLensflare;
 
 uniform sampler2D tMedia;
+uniform sampler2D tSky;
+uniform sampler2D tThumb;
 uniform float uMediaReveal;
 uniform float uFluidStrength;
 
@@ -114,6 +168,22 @@ uniform sampler2D tPerlin;
 uniform float uTime;
 uniform float uTransformX;
 
+// 新增：色调映射控制
+uniform bool uEnableToneMapping;
+uniform float uExposure;
+
+// 新增：从 render 设置迁移过来的控制
+uniform float uDarken;
+uniform float uSaturation;
+
+// 新增：层可见性控制
+uniform bool uShowWork;
+uniform bool uShowMedia;
+uniform bool uShowMouse;
+uniform bool uShowBloom;
+uniform bool uShowFluid;
+uniform int uDebugView;
+
 in vec2 vUv;
 out vec4 FragColor;
 
@@ -123,94 +193,212 @@ float random(vec2 st)
 }
 
 void main() {
+  // Debug View: 直接输出指定层，绕过所有合成逻辑
+  if (uDebugView != 0) {
+    vec2 duv = vUv;
+    if (uDebugView == 1) { FragColor = vec4(texture(tWork, duv).rgb, 1.); return; }
+    if (uDebugView == 2) { FragColor = vec4(texture(tMedia, duv).rgb, 1.); return; }
+    if (uDebugView == 3) { FragColor = vec4(texture(tBloom, duv).rgb, 1.); return; }
+    if (uDebugView == 4) { FragColor = vec4(texture(tMouseSim, duv).rgb, 1.); return; }
+    if (uDebugView == 5) { FragColor = vec4(texture(tFluid, duv).rgb, 1.); return; }
+    if (uDebugView == 6) { FragColor = vec4(texture(tNoise, duv).rgb, 1.); return; }
+    if (uDebugView == 7) { FragColor = vec4(texture(tPerlin, duv).rgb, 1.); return; }
+    if (uDebugView == 8) { FragColor = vec4(uBgColor, 1.); return; }
+    if (uDebugView == 9) { FragColor = vec4(texture(tSky, duv).rgb, 1.); return; }
+    if (uDebugView == 10) { FragColor = vec4(texture(tThumb, duv).rgb, 1.); return; }
+  }
+
+  // ========================================
+  // 步骤 1: 准备 UV 和 Perlin 噪声纹理
+  // ========================================
+  // 目的：创建动态的、随时间变化的噪声效果
+  
+  // 1.1 计算 Perlin 噪声的 UV（缩小 4 倍，慢速滚动）
   vec2 perlinUv = vUv * .25;
-
-  // apply ratio
   perlinUv.xy -= 0.5;
-  perlinUv.x *= uRatio;
+  perlinUv.x *= uRatio;  // 保持宽高比
   perlinUv.xy += 0.5;
+  perlinUv.x -= uTime * .01;   // 水平滚动（慢）
+  perlinUv.y -= uTime * .005;  // 垂直滚动（更慢）
+  perlinUv.x += uTransformX;   // 额外的水平偏移
 
-  perlinUv.x -= uTime * .01;  
-  perlinUv.y -= uTime * .005;  
-
-  perlinUv.x += uTransformX;
-
+  // 1.2 采样 Perlin 噪声并增强对比度
   vec4 perlin = texture(tPerlin, perlinUv);
-  perlin.rgb = contrast(perlin.rgb, 5.);
+  perlin.rgb = contrast(perlin.rgb, 5.);  // 对比度 x5，让噪声更明显
 
-  vec2 displacementUv = vUv * 2.;
-
-  displacementUv.xy -= 0.5;
-  displacementUv.x *= uRatio;
-  displacementUv.xy += 0.5;
-
+  // ========================================
+  // 步骤 2: 流体扭曲（Fluid Distortion）
+  // ========================================
+  // 目的：基于 WavvesScene 的波纹，扭曲整个画面
+  
+  // 2.1 采样流体纹理（来自 WavvesScene）
   vec4 fluid = texture(tFluid, vUv);
-  vec2 fluidUv = vUv + fluid.rg * -.2 * uFluidStrength;
-  vec2 uv = vUv + fluid.rg * -.2 * uFluidStrength;
-
-  // vec2 uv = vUv;
+  if (!uShowFluid) {
+    fluid = vec4(0.0);
+  }
+  
+  // 2.2 根据流体的 RG 通道（表示 2D 向量场）扭曲 UV
+  // 如果 uShowFluid 为 false，则不应用扭曲
+  vec2 fluidUv = uShowFluid ? vUv + fluid.rg * -.2 * uFluidStrength : vUv;
+  vec2 uv = uShowFluid ? vUv + fluid.rg * -.2 * uFluidStrength : vUv;
   vec2 perlinCoords = vUv;
 
+  // 2.3 计算晕影遮罩（边缘变暗）
   float vignetteF = vignette(uv.xy, 0.1, .55, 2.0, .25);
 
+  // 2.4 如果启用了 Perlin 扰动，进一步扭曲坐标
   if(uPerlin > 0.0) {
     perlinCoords += perlin.b * uPerlin;
     perlinCoords -= uPerlin * .065;
   }
 
-  vec4 mouseSim = texture(tMouseSim, mix(perlinCoords, uv, 2.5));
-
-  mouseSim.rgb = contrast(mouseSim.rgb, 1.);
+  // ========================================
+  // 步骤 3: 采样主场景 + RGB 色彩偏移
+  // ========================================
+  // 目的：获取主 3D 场景，并添加色差效果（模拟镜头色散）
   
+  // 3.1 采样鼠标交互纹理（用于后续步骤）
+  vec4 mouseSim = texture(tMouseSim, mix(perlinCoords, uv, 2.5));
+  mouseSim.rgb = contrast(mouseSim.rgb, 1.);
+  if (!uShowMouse) {
+    mouseSim = vec4(0.0);
+  }
+  
+  // 3.2 计算两个不同的晕影遮罩
   float perlinVignette = vignette(perlinCoords.xy, 0.1, .35, 2.0, .5);
   float displacementVignette = vignette(uv.xy, 0.1, .5, 2.0, .5);
   
-  vec4 sceneDisplaced = rgbshift(tWork, uv, -1., .005);
-  vec4 scene = rgbshift(tWork, uv, -1., .0005 + .1 * length(fluid.xy) * uFluidStrength);
-
+  // 3.3 采样主场景，应用两种不同强度的 RGB 偏移
+  // rgbshift: 将 R、G、B 三个通道分别偏移，模拟色差
+  vec4 sceneDisplaced = rgbshift(tWork, uv, -1., .005);  // 强偏移
+  vec4 scene = rgbshift(tWork, uv, -1., .0005 + .1 * length(fluid.xy) * uFluidStrength);  // 弱偏移 + 流体影响
+  
+  // 3.4 混合两种偏移效果（边缘使用强偏移，中心使用弱偏移）
   vec3 sceneMixed = mix(scene.rgb, sceneDisplaced.rgb, (1. - displacementVignette) * 1.);
-  vec3 mixed = mix(uBgColor, sceneMixed.rgb, 1.);
+  
+  // 3.5 将场景与背景色混合（如果 uShowWork 为 false，只显示背景色）
+  vec3 mixed = uShowWork ? mix(uBgColor, sceneMixed.rgb, 1.) : uBgColor;
 
-  mixed.rgb += mouseSim.rgb * .065;
-  mixed.rgb = mix(mixed.rgb, mixed.rgb * 5., (1. - perlinVignette) * .075);
+  // ========================================
+  // 步骤 4: 添加鼠标交互效果
+  // ========================================
+  // 目的：在鼠标移动轨迹上添加发光效果
+  
+  if(uShowMouse) {
+    // 4.1 直接叠加鼠标模拟纹理（加法混合）
+    mixed.rgb += mouseSim.rgb * .065;
+    
+    // 4.2 在边缘区域增强亮度（基于 perlinVignette）
+    mixed.rgb = mix(mixed.rgb, mixed.rgb * 5., (1. - perlinVignette) * .075);
+  }
 
+  // ========================================
+  // 步骤 5: 添加 Perlin 噪声细节
+  // ========================================
+  // 目的：增加画面的细节和质感
+  
   vec3 displacedPerlin = perlin.rgb;
+  // blend(1, ...) 使用加法混合模式
+  // 强度受 displacementVignette 和 mouseSim 影响（边缘和鼠标区域更明显）
   mixed.rgb = blend(1, mixed.rgb, displacedPerlin, (1. - displacementVignette +  mouseSim.r * .5) * .05);
 
-  if(boolBloom) {
+  // ========================================
+  // 步骤 6: 添加 Bloom 发光效果
+  // ========================================
+  // 目的：让亮部产生柔和的发光扩散
+  
+  if(boolBloom && uShowBloom) {
+    // 6.1 第一次采样：基础 Bloom（带轻微 RGB 偏移）
     vec4 bloom = rgbshift(tBloom, uv, -1.5, .02);
-    float angle = length(uv + 0.5);
+    
+    // 6.2 第二次采样：径向 Bloom（从中心向外扩散）
+    float angle = length(uv + 0.5);  // 计算径向角度
     float uBloomDistortion = 2.5;
     float amount = .001 * uBloomDistortion;
 
-    mixed.rgb += bloom.rgb;
-    mixed.rgb += rgbshift(tBloom, uv, angle, amount / .5).rgb;
+    // 6.3 叠加两次 Bloom（强度降低到 50%，避免过曝）
+    mixed.rgb += bloom.rgb * 0.5;
+    mixed.rgb += rgbshift(tBloom, uv, angle, amount / .5).rgb * 0.5;
   }
 
+  // ========================================
+  // 步骤 7: 准备蓝噪声纹理
+  // ========================================
+  // 目的：为后续的胶片颗粒感做准备
+  
   vec2 noiseUv = vUv;
-
   noiseUv.xy -= 0.5;
-  noiseUv.x *= uRatio;
+  noiseUv.x *= uRatio;  // 保持宽高比
   noiseUv.xy += 0.5;
-
-  noiseUv.xy *= 15.;
-
+  noiseUv.xy *= 15.;    // 放大 15 倍（小颗粒）
   vec4 noise = texture(tNoise, noiseUv);
 
+  // ========================================
+  // 步骤 8: 统一后处理（色彩校正）
+  // ========================================
+  // 目的：调整整体的明暗、对比度、饱和度
+  
+  // 8.1 暗化（向黑色混合）
+  mixed.rgb = mix(mixed.rgb, vec3(0.0), uDarken);
+  
+  // 8.2 对比度增强（两次应用）
   mixed.rgb = contrast(mixed.rgb, uContrast);
   mixed.rgb *= uContrast;
-
-  // mixed.rgb += length(fluid.xy) * 1.15;
-
-  mixed.rgb = saturation(mixed.rgb, 1.15);
+  
+  // 8.3 饱和度调整（两次应用）
+  mixed.rgb = saturation(mixed.rgb, uSaturation);  // 用户控制的饱和度
+  mixed.rgb = saturation(mixed.rgb, 1.15);         // 额外增强 15%
+  
+  // 8.4 与背景色混合（使用 Lighten 混合模式）
+  // blend(11, ...) 是 blendLighten，取两者中较亮的值
   mixed.rgb = blend(11, mixed.rgb, uBgColor.rgb, .85);
   
-  vec4 media = rgbshift(tMedia, fluidUv, length(fluidUv + 2.5), .15 * length(fluid.xy) * uFluidStrength);
+  // ========================================
+  // 步骤 9: 混合媒体层（图片/视频）
+  // ========================================
+  // 目的：在 3D 场景上叠加媒体内容
   
-  mixed.rgb = mix(mixed.rgb, media.rgb, media.a * uMediaReveal);
+  if(uShowMedia) {
+    // 9.1 采样媒体纹理（使用流体扭曲后的 UV）
+    // RGB 偏移量受流体强度影响
+    vec4 media = rgbshift(tMedia, fluidUv, length(fluidUv + 2.5), .15 * length(fluid.xy) * uFluidStrength);
+    
+    // 9.2 基于 alpha 通道和 uMediaReveal 参数混合
+    mixed.rgb = mix(mixed.rgb, media.rgb, media.a * uMediaReveal);
+  }
+  
+  // ========================================
+  // 步骤 10: 添加胶片噪声（Film Grain）
+  // ========================================
+  // 目的：模拟胶片的颗粒感，增加复古质感
+  
+  // 10.1 第一次混合：75% 保留原色，25% 应用噪声
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, .75);
+  
+  // 10.2 第二次混合：进一步减弱噪声效果
+  // 注意：这里 1.5 > 1.0，所以实际上是完全保留原色（可能是为了微调）
   mixed.rgb = mix(mixed.rgb * noise.rgb, mixed.rgb, 1.5);
  
+  // ========================================
+  // 步骤 11: 应用曝光度
+  // ========================================
+  // 目的：整体调亮或调暗画面
+  
+  mixed.rgb *= uExposure;
+ 
+  // ========================================
+  // 步骤 12: ACES 色调映射（HDR → LDR）
+  // ========================================
+  // 目的：将高动态范围映射到显示器可显示的范围
+  // 特点：保留暗部细节，高光柔和过渡，电影感强
+  
+  if(uEnableToneMapping) {
+    mixed.rgb = ACESFilm(mixed.rgb);
+  }
+ 
+  // ========================================
+  // 最终输出
+  // ========================================
   FragColor = vec4(mixed.rgb, 1.);
 }
 `;
@@ -242,6 +430,8 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         tScene: { value: null },
         tWork: { value: null },
         tMedia: { value: null },
+        tSky: { value: null },
+        tThumb: { value: null },
         tBloom: { value: null },
         tBlur: { value: null },
         tFluid: { value: null },
@@ -266,6 +456,19 @@ class MainCompositeMaterial extends THREE.ShaderMaterial {
         uContrast: { value: 1.1 },
         uTransformX: { value: 0 },
         uFluidStrength: { value: 0.5 },
+        // 新增：色调映射控制
+        uEnableToneMapping: { value: true },
+        uExposure: { value: 1.0 },
+        // 新增：从 render 设置迁移过来的控制
+        uDarken: { value: 0.2 },
+        uSaturation: { value: 0.35 },
+        // 新增：层可见性控制
+        uShowWork: { value: true },
+        uShowMedia: { value: true },
+        uShowMouse: { value: true },
+        uShowBloom: { value: true },
+        uShowFluid: { value: true },
+        uDebugView: { value: 0 },
       },
       vertexShader: MAIN_VERTEX,
       fragmentShader: MAIN_FRAGMENT,
@@ -317,6 +520,8 @@ export class MainComposite {
     this.material.uniforms.tFluid.value = this.dummyTexture;
     this.material.uniforms.tMouseSim.value = this.dummyTexture;
     this.material.uniforms.tBloom.value = this.dummyTexture;
+    this.material.uniforms.tSky.value = this.dummyTexture;
+    this.material.uniforms.tThumb.value = this.dummyTexture;
     this.renderTarget = new THREE.WebGLRenderTarget(1, 1, {
       depthBuffer: false,
       stencilBuffer: false,
@@ -346,10 +551,13 @@ export class MainComposite {
     mouse?: THREE.Texture | null;
     bloom?: THREE.Texture | null;
     fluid?: THREE.Texture | null;
+    sky?: THREE.Texture | null;
+    thumb?: THREE.Texture | null;
     ratio: number;
     fluidStrength?: number;
   }) {
-    const { time, work, media, mouse, bloom, fluid, ratio, fluidStrength = 0 } = options;
+    const { time, work, media, mouse, bloom, fluid, sky, thumb, ratio, fluidStrength = 0 } =
+      options;
     this.material.uniforms.uTime.value = time;
     this.material.uniforms.uRatio.value = ratio;
     this.material.uniforms.tWork.value = work ?? this.dummyTexture;
@@ -357,6 +565,8 @@ export class MainComposite {
     this.material.uniforms.tMouseSim.value = mouse ?? this.dummyTexture;
     this.material.uniforms.tBloom.value = bloom ?? this.dummyTexture;
     this.material.uniforms.tFluid.value = fluid ?? this.dummyTexture;
+    this.material.uniforms.tSky.value = sky ?? this.dummyTexture;
+    this.material.uniforms.tThumb.value = thumb ?? this.dummyTexture;
     this.material.uniforms.boolBloom.value = !!bloom;
     this.material.uniforms.boolFluid.value = !!fluid;
     this.material.uniforms.uFluidStrength.value = fluidStrength;

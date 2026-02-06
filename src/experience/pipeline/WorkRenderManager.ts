@@ -55,61 +55,55 @@ vec3 blend(int mode, vec3 base, vec3 blend, float opacity) {
 }
 `;
 
+/**
+ * WorkScene 合成 Shader
+ * 
+ * 优化策略：
+ * - 只做基础合成，不做暗化和饱和度调整
+ * - 不在这里混合 Bloom（留给 MainComposite）
+ * - 保持图像的原始动态范围
+ * 
+ * 这样可以避免：
+ * 1. 重复的后处理
+ * 2. Bloom 被应用两次
+ * 3. 过度的图像处理
+ */
 const COMPOSITE_FRAGMENT = `
 precision highp float;
 
-${SATURATION}
-${VIGNETTE}
 ${RGBSHIFT}
-${BLEND}
 
 uniform sampler2D tScene;
 uniform sampler2D tBloom;
 uniform sampler2D tFluid;
-uniform sampler2D tBlur;
 uniform sampler2D tMouseSim;
 
 uniform bool boolBloom;
-uniform bool boolFluid;
-uniform bool boolLuminosity;
-uniform bool boolFxaa;
-
 uniform float uDarken;
 uniform float uSaturation;
-
-float vignout = .55;
-float vignin = 0.1;
-float vignfade = 2.0;
 
 in vec2 vUv;
 out vec4 FragColor;
 
 void main() {
-  vec4 fluid = texture(tFluid, vUv);
-  vec4 mouseSim = texture(tMouseSim, vUv);
   vec2 uv = vUv;
+  
+  // 基础场景采样（轻微 RGB 偏移）
   vec4 mixed = rgbshift(tScene, uv, -1., .0015);
-
-  if(boolBloom) {
-    vec4 bloom = rgbshift(tBloom, uv, -1.5, .02);
-    float angle = length(uv + 0.5);
-    float uBloomDistortion = 2.5;
-    float amount = .001 * uBloomDistortion;
-
-    mixed.rgb += bloom.rgb;
-    mixed.rgb += rgbshift(tBloom, uv, angle, amount / .5).rgb;
-  }
-
+  
+  // 添加流体效果的轻微影响
+  vec4 fluid = texture(tFluid, vUv);
   mixed.rgb += length(fluid.xy) * .015;
-
-  vec3 black = vec3(0.095,0.095,0.095);
-
-  mixed.rgb = blend(15, mixed.rgb, black, uDarken * 2. + mouseSim.r * .25 * uDarken);
-  mixed.rgb = blend(11, mixed.rgb, black, 1.);
-  mixed.rgb = saturation(mixed.rgb, uSaturation);
-
+  
+  // 注意：不在这里混合 Bloom！
+  // Bloom 纹理会被传递给 MainComposite 统一处理
+  // 这样避免 Bloom 被应用两次
+  
+  // 注意：不在这里做暗化和饱和度！
+  // 这些效果会在 MainComposite 中统一处理
+  // 保持原始动态范围，避免过度处理
+  
   FragColor = vec4(mixed.rgb, 1.);
-
 }
 `;
 

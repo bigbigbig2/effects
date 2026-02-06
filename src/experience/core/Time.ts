@@ -1,4 +1,4 @@
-﻿// Time 类：
+﻿﻿// Time 类：
 // 简单的游戏循环/时间管理器。
 // 使用 requestAnimationFrame 来驱动每一帧的更新。
 export class Time {

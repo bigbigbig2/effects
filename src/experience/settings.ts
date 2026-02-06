@@ -1,3 +1,16 @@
+export type DebugView =
+  | "final"
+  | "work"
+  | "media"
+  | "bloom"
+  | "mouse"
+  | "fluid"
+  | "noise"
+  | "perlin"
+  | "bg"
+  | "sky"
+  | "thumb";
+
 export type ExperienceSettings = {
   controls: {
     stepVelocity: number;
@@ -8,6 +21,14 @@ export type ExperienceSettings = {
     unlockVelocity: number;
     lockScroll: boolean;
     wheelThreshold: number;
+  };
+  layers: {
+    showWork: boolean;
+    showMedia: boolean;
+    showMouse: boolean;
+    showBloom: boolean;
+    showFluid: boolean;
+    debugView: DebugView;
   };
   render: {
     darken: number;
@@ -25,6 +46,9 @@ export type ExperienceSettings = {
     fluidStrength: number;
     mediaReveal: number;
     bgColor: string;
+    // 新增：色调映射和曝光度控制
+    enableToneMapping: boolean;
+    exposure: number;
   };
   work: {
     onlyActiveVisible: boolean;
@@ -79,6 +103,14 @@ const defaultSettings: ExperienceSettings = {
     lockScroll: false,
     wheelThreshold: 120,
   },
+  layers: {
+    showWork: true,
+    showMedia: true,
+    showMouse: true,
+    showBloom: true,
+    showFluid: true,
+    debugView: "final",
+  },
   render: {
     darken: 0.2,
     saturation: 0.35,
@@ -95,12 +127,15 @@ const defaultSettings: ExperienceSettings = {
     fluidStrength: 0.04,
     mediaReveal: 0,
     bgColor: "#1f1f1f",
+    // 新增：色调映射和曝光度控制
+    enableToneMapping: true,
+    exposure: 1.0,
   },
   work: {
     onlyActiveVisible: false,
-    ambientIntensity: 0.5,
+    ambientIntensity: -1,
     spotIntensity: 220,
-    fogEnabled: true,
+    fogEnabled: false,
     fogColor: "#A294FF",
     fogNear: 17.39,
     fogFar: 35.87,
@@ -111,7 +146,7 @@ const defaultSettings: ExperienceSettings = {
     groundOpacity: 1,
     groundEnvIntensity: 0.97,
     groundY: -1.65,
-    groundScale: 1,
+    groundScale: 1.5,
     envDarken: 1,
     envShader1Alpha: 0.5,
     envShader1Speed: 0.5,
@@ -140,6 +175,7 @@ const defaultSettings: ExperienceSettings = {
 
 const settings: ExperienceSettings = {
   controls: { ...defaultSettings.controls },
+  layers: { ...defaultSettings.layers },
   render: { ...defaultSettings.render },
   composite: { ...defaultSettings.composite },
   work: { ...defaultSettings.work },
@@ -150,6 +186,7 @@ type Listener = (value: ExperienceSettings) => void;
 
 type PartialSettings = {
   controls?: Partial<ExperienceSettings["controls"]>;
+  layers?: Partial<ExperienceSettings["layers"]>;
   render?: Partial<ExperienceSettings["render"]>;
   composite?: Partial<ExperienceSettings["composite"]>;
   work?: Partial<ExperienceSettings["work"]>;
@@ -165,6 +202,9 @@ export function getSettings() {
 export function setSettings(partial: PartialSettings) {
   if (partial.controls) {
     Object.assign(settings.controls, partial.controls);
+  }
+  if (partial.layers) {
+    Object.assign(settings.layers, partial.layers);
   }
   if (partial.render) {
     Object.assign(settings.render, partial.render);
@@ -184,6 +224,7 @@ export function setSettings(partial: PartialSettings) {
 export function resetSettings() {
   setSettings({
     controls: { ...defaultSettings.controls },
+    layers: { ...defaultSettings.layers },
     render: { ...defaultSettings.render },
     composite: { ...defaultSettings.composite },
     work: { ...defaultSettings.work },

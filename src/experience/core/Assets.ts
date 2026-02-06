@@ -1,4 +1,4 @@
-﻿import * as THREE from "three";
+﻿﻿import * as THREE from "three";
 
 type ProgressDetail = {
   loaded: number;   // 已加载数量

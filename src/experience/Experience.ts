@@ -1,4 +1,4 @@
-﻿import { Renderer } from "./core/Renderer";
+﻿﻿import { Renderer } from "./core/Renderer";
 import { Time } from "./core/Time";
 import { Input } from "./core/Input";
 import { Assets } from "./core/Assets";

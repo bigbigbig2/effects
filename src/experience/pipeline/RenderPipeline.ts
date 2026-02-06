@@ -3,7 +3,7 @@ import type { Renderer } from "../core/Renderer";
 import type { Assets } from "../core/Assets";
 import type { Input } from "../core/Input";
 import type { TweenDriver } from "../motion/TweenDriver";
-import type { ExperienceSettings } from "../settings";
+import type { ExperienceSettings, DebugView } from "../settings";
 import type { ProjectItem } from "../data/projects";
 import { WorkScene } from "../scenes/WorkScene";
 import { MediaScene } from "../scenes/MediaScene";
@@ -34,6 +34,20 @@ type ThemePayload = {
     saturation: number;
   };
   compositeBg: string;
+};
+
+const DEBUG_VIEW_INDEX: Record<DebugView, number> = {
+  final: 0,
+  work: 1,
+  media: 2,
+  bloom: 3,
+  mouse: 4,
+  fluid: 5,
+  noise: 6,
+  perlin: 7,
+  bg: 8,
+  sky: 9,
+  thumb: 10,
 };
 
 export class RenderPipeline {
@@ -183,6 +197,8 @@ export class RenderPipeline {
       mouse: mouseTexture,
       bloom: bloomTexture,
       fluid: this.wavvesScene.texture,
+      sky: this.skyScene.texture,
+      thumb: this.workThumbScene.texture,
       ratio: size.width / size.height,
       fluidStrength: settings.composite.fluidStrength,
     });
@@ -192,6 +208,8 @@ export class RenderPipeline {
   private applySettings(settings: ExperienceSettings) {
     const render = settings.render;
 
+    // 注意：虽然 WorkScene 的 shader 不再使用 darken 和 saturation
+    // 但我们仍然需要设置这些 uniforms，以保持 GUI 控制的响应性
     const compositeUniforms = this.workScene.renderManager.compositeMaterial.uniforms;
     compositeUniforms.uDarken.value = render.darken;
     compositeUniforms.uSaturation.value = render.saturation;
@@ -247,12 +265,29 @@ export class RenderPipeline {
       pressure: settings.work.mousePressure,
     });
 
+    // MainComposite 统一处理所有后处理效果
     const mainUniforms = this.mainComposite.material.uniforms;
     mainUniforms.uContrast.value = settings.composite.contrast;
     mainUniforms.uPerlin.value = settings.composite.perlin;
     mainUniforms.uFluidStrength.value = settings.composite.fluidStrength;
     mainUniforms.uMediaReveal.value = settings.composite.mediaReveal;
     mainUniforms.uBgColor.value.set(settings.composite.bgColor).convertLinearToSRGB();
+    
+    // 新增：色调映射和曝光度控制
+    mainUniforms.uEnableToneMapping.value = settings.composite.enableToneMapping;
+    mainUniforms.uExposure.value = settings.composite.exposure;
+    
+    // 新增：从 render 设置迁移到 MainComposite
+    mainUniforms.uDarken.value = render.darken;
+    mainUniforms.uSaturation.value = render.saturation;
+    
+    // 新增：层可见性控制
+    mainUniforms.uShowWork.value = settings.layers.showWork;
+    mainUniforms.uShowMedia.value = settings.layers.showMedia;
+    mainUniforms.uShowMouse.value = settings.layers.showMouse;
+    mainUniforms.uShowBloom.value = settings.layers.showBloom;
+    mainUniforms.uShowFluid.value = settings.layers.showFluid;
+    mainUniforms.uDebugView.value = DEBUG_VIEW_INDEX[settings.layers.debugView] ?? 0;
 
     const skyUniforms = this.skyScene.renderManager.compositeMaterial.uniforms;
     skyUniforms.uShader1Alpha.value = settings.sky.shader1Alpha;
