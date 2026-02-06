@@ -2,21 +2,6 @@
 
 import { useEffect } from "react";
 import { getSettings, resetSettings, setSettings } from "../../experience/settings";
-import type { DebugView } from "../../experience/settings";
-
-const DEBUG_VIEW_OPTIONS: Record<string, DebugView> = {
-  Final: "final",
-  Work: "work",
-  Media: "media",
-  Bloom: "bloom",
-  Mouse: "mouse",
-  Fluid: "fluid",
-  Noise: "noise",
-  Perlin: "perlin",
-  Background: "bg",
-  Sky: "sky",
-  Thumb: "thumb",
-};
 
 export function DebugGui() {
   useEffect(() => {
@@ -31,74 +16,16 @@ export function DebugGui() {
       gui = new GUI({ width: 340, title: "Render Debug" });
       gui.domElement.classList.add("debug-gui");
 
-      const view = gui.addFolder("View");
-      view
-        .add(settings.layers, "debugView", DEBUG_VIEW_OPTIONS)
-        .name("Display")
-        .onChange((value: DebugView) => setSettings({ layers: { debugView: value } }));
-      view.open();
-
-      const layers = gui.addFolder("Layers");
-      layers
-        .add(settings.layers, "showWork")
-        .name("Work")
-        .onChange((value: boolean) => setSettings({ layers: { showWork: value } }));
-      layers
-        .add(settings.layers, "showMedia")
-        .name("Media")
-        .onChange((value: boolean) => setSettings({ layers: { showMedia: value } }));
-      layers
-        .add(settings.layers, "showBloom")
-        .name("Bloom")
-        .onChange((value: boolean) => setSettings({ layers: { showBloom: value } }));
-      layers
-        .add(settings.layers, "showMouse")
-        .name("Mouse")
-        .onChange((value: boolean) => setSettings({ layers: { showMouse: value } }));
-      layers
-        .add(settings.layers, "showFluid")
-        .name("Fluid")
-        .onChange((value: boolean) => setSettings({ layers: { showFluid: value } }));
-      layers.open();
-
-      const composite = gui.addFolder("Composite");
-      composite
-        .addColor(settings.composite, "bgColor")
-        .name("Background")
-        .onChange((value: string) => setSettings({ composite: { bgColor: value } }));
-      composite
-        .add(settings.composite, "contrast", 0.5, 2, 0.01)
-        .name("Contrast")
-        .onChange((value: number) => setSettings({ composite: { contrast: value } }));
-      composite
+      const color = gui.addFolder("Color");
+      color
         .add(settings.render, "darken", 0, 1, 0.01)
         .name("Darken")
         .onChange((value: number) => setSettings({ render: { darken: value } }));
-      composite
+      color
         .add(settings.render, "saturation", 0.2, 2, 0.01)
         .name("Saturation")
         .onChange((value: number) => setSettings({ render: { saturation: value } }));
-      composite
-        .add(settings.composite, "perlin", 0, 0.5, 0.01)
-        .name("Perlin")
-        .onChange((value: number) => setSettings({ composite: { perlin: value } }));
-      composite
-        .add(settings.composite, "fluidStrength", 0, 1, 0.01)
-        .name("Fluid Strength")
-        .onChange((value: number) => setSettings({ composite: { fluidStrength: value } }));
-      composite
-        .add(settings.composite, "mediaReveal", 0, 1, 0.01)
-        .name("Media Reveal")
-        .onChange((value: number) => setSettings({ composite: { mediaReveal: value } }));
-      composite
-        .add(settings.composite, "enableToneMapping")
-        .name("Tone Mapping")
-        .onChange((value: boolean) => setSettings({ composite: { enableToneMapping: value } }));
-      composite
-        .add(settings.composite, "exposure", 0.25, 3, 0.01)
-        .name("Exposure")
-        .onChange((value: number) => setSettings({ composite: { exposure: value } }));
-      composite.open();
+      color.open();
 
       const fog = gui.addFolder("Fog");
       fog
@@ -262,33 +189,6 @@ export function DebugGui() {
         .name("Luminosity Smoothing")
         .onChange((value: number) => setSettings({ render: { luminositySmoothing: value } }));
       render.close();
-
-      const sky = gui.addFolder("Sky");
-      sky
-        .add(settings.sky, "shader1Alpha", 0, 1, 0.01)
-        .name("Shader1 Alpha")
-        .onChange((value: number) => setSettings({ sky: { shader1Alpha: value } }));
-      sky
-        .add(settings.sky, "shader1Speed", 0, 2, 0.01)
-        .name("Shader1 Speed")
-        .onChange((value: number) => setSettings({ sky: { shader1Speed: value } }));
-      sky
-        .add(settings.sky, "shader1Scale", 0, 20, 0.1)
-        .name("Shader1 Scale")
-        .onChange((value: number) => setSettings({ sky: { shader1Scale: value } }));
-      sky
-        .add(settings.sky, "shader2Speed", 0, 2, 0.01)
-        .name("Shader2 Speed")
-        .onChange((value: number) => setSettings({ sky: { shader2Speed: value } }));
-      sky
-        .add(settings.sky, "shader2Scale", 0, 20, 0.1)
-        .name("Shader2 Scale")
-        .onChange((value: number) => setSettings({ sky: { shader2Scale: value } }));
-      sky
-        .add(settings.sky, "shaderMix", 0, 3, 0.01)
-        .name("Shader Mix")
-        .onChange((value: number) => setSettings({ sky: { shaderMix: value } }));
-      sky.close();
 
       const controls = gui.addFolder("Controls");
       controls

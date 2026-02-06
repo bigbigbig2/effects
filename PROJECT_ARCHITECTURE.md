@@ -31,7 +31,7 @@
 核心 WebGL 逻辑，与 React 解耦。
 - **`Experience.ts`**: 主入口点/控制器类。初始化渲染器、循环和场景。
 - **`core/`**: 底层系统 (渲染器, 时间循环, 输入, 资源加载)。
-- **`scenes/`**: 独立的 3D 场景 (例如用于主画廊的 `WorkScene`, `MediaScene`, `WavvesScene`)。
+- **`scenes/`**: 独立的 3D 场景 (当前仅保留主视图 `WorkScene`)。
 - **`pipeline/`**: 后处理效果 (合成器, Passes)。
 - **`motion/`**: 动画驱动器 (滚动, Tween)。
 - **`world/`**: 3D 对象和材质。

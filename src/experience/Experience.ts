@@ -45,7 +45,6 @@ export class Experience {
   
   // 状态变量
   private activeIndex = 0;
-  private mediaEnabled = false;
   private stepIndex = 0;
   private stepCooldown = 0;
   private stepLocked = false;
@@ -62,7 +61,7 @@ export class Experience {
     this.sound = new Soundscape();
     this.pipeline = new RenderPipeline(this.renderer, this.assets, projects);
 
-    this.pipeline.setActiveIndex(0, this.mediaEnabled);
+    this.pipeline.setActiveIndex(0);
     this.applyProjectTheme(0);
 
     // 6. 绑定全局事件监听
@@ -106,7 +105,7 @@ export class Experience {
     if (index === this.activeIndex) return;
     this.activeIndex = index;
 
-    this.pipeline.setActiveIndex(index, this.mediaEnabled);
+    this.pipeline.setActiveIndex(index);
     this.applyProjectTheme(index);
 
     const detail: UiActiveDetail = { index, progress };
@@ -173,7 +172,6 @@ export class Experience {
       tween: this.tween,
       size: { width, height },
       settings,
-      mediaEnabled: this.mediaEnabled,
     });
 
     this.emitActive(this.tween.progress);
@@ -193,8 +191,6 @@ export class Experience {
       ambientIntensity < 0 && project.colors?.invert ? project.colors.invert : secondary;
     const darken = project.darkenOverview ?? settings.render.darken;
     const saturation = project.saturation ?? settings.render.saturation;
-    const contrast = project.contrast ?? settings.composite.contrast;
-    const mediaBackground = project.colors?.media ?? primary;
     const thumb = project.thumbnail ?? {};
 
     this.setMainColor(primary);
@@ -202,18 +198,15 @@ export class Experience {
       blocksColor: primary,
       ambientColor,
       ambientIntensity,
-      mediaBackground,
       thumb: {
         darkness: thumb.darkness ?? 0,
         darknessColor: thumb.darknessColor ?? "#000000",
         saturation: thumb.saturation ?? 1,
       },
-      compositeBg: mediaBackground,
     });
 
     setSettings({
       render: { darken, saturation },
-      composite: { contrast, bgColor: mediaBackground },
       work: {
         ambientIntensity,
         mouseLightness: thumb.mouseLightness ?? settings.work.mouseLightness,
